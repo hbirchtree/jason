@@ -1,0 +1,109 @@
+{
+	"variables":
+	[
+		{
+			"name": "GAMETIMER_DIR",
+			"value": "%HOME%/.local/share/gametimer"
+		},
+		{
+			"name": "XINPUT_MOUSE",
+			"value": "Logitech USB-PS/2 Optical Mouse"
+		}
+	],
+	"subsystems":
+	[
+		{
+			"type": "bool",
+			"enabler": "glxosd",
+			"environment":
+			[
+				{
+					"type": "exec-prefix",
+					"sys.exec.prefix": "%TOOLS%/glxosd/glxosd"
+				}
+			]
+		},
+		{
+			"type": "bool",
+			"enabler": "gametimer",
+			"environment":
+			[
+				{
+					"type": "exec-prefix",
+					"sys.exec.prefix": "/usr/bin/time --format=%e -a -o %GAMETIMER_DIR%/%GAMETIMER_LABEL%.log"
+				}
+			]
+		},
+		{
+			"type": "option",
+			"enabler": "nvidia-optimizations",
+			"options":
+			[
+				{
+					"id": "glthread",
+					"environment":
+					[
+						{
+							"type": "variable",
+							"name": "__GL_THREADED_OPTIMIZATIONS",
+							"value": "1"
+						},
+						{
+							"type": "variable",
+							"name": "LD_PRELOAD",
+							"value": "libpthread.so.0 libGL.so.1"
+						}
+					]
+				},
+				{
+					"id": "vblank",
+					"environment":
+					[
+						{
+							"type": "variable",
+							"name": "__GL_SYNC_TO_VBLANK",
+							"value": "1"
+						}
+					]
+				}
+			]
+		},
+		{
+			"type": "select",
+			"enabler": "xinput-mouse-profile",
+			"action": "xinput set-prop %XINPUT_MOUSE_DEVICE% %VARIABLE% %VALUE%",
+			"selections":
+			[
+				{
+					"listname": "noaccel",
+					"variables":
+					[
+						{
+							"name": "Device Accel Profile",
+							"value": "-1"
+						},
+						{
+							"name": "Device Accel Constant Deceleration",
+							"value": "1.5"
+						}
+					]
+				},
+				{
+					"listname": "desktop",
+					"variables":
+					[
+						{
+							"name": "Device Accel Profile",
+							"value": "0"
+						},
+						{
+							"name": "Device Accel Constant Deceleration",
+							"value": "1"
+						}
+					]
+				}
+			]
+		}
+		
+	]
+}
