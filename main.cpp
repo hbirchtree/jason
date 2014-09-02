@@ -1,31 +1,61 @@
 //#include "jason.h"
 #include "jasonparser.h"
-#include <QApplication>
+#include <QCoreApplication>
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    JasonParser jParse;
+    QCoreApplication a(argc, argv);
+    QCoreApplication::setApplicationName("Jason");
+    QCoreApplication::setApplicationVersion("0.1");
 
+    JasonParser jParse;
 
     //Interface? Ain't nobody got time fo' dat.
     //    Jason w;
     //    w.show();
 
+    //Parse the command line
+    QCommandLineParser cParse;
+    cParse.setApplicationDescription("Jason launcher");
+    cParse.addHelpOption();
+    cParse.addPositionalArgument("file",QCoreApplication::translate("init","File to open"));
+    //Actual processing
+    cParse.process(a);
+
+    QStringList posArgs = cParse.positionalArguments();
+    QString filename;
+    if (posArgs.length()>=1){
+        filename = posArgs[0];
+    } else
+        return 0;
+
+    //Open document
+    QJsonDocument jDoc;
+    jDoc = jParse.jsonOpenFile(filename);
+    jParse.jsonParse(jDoc);
+
+    jParse.testEnvironment();
+
+    return 0;
+}
+
+void JasonParser::testEnvironment(){
+//    substituteNames = new QStringList;
+//    substituteValues = new QStringList;
+//    qDebug() << substituteValues;
+}
+
+QJsonDocument JasonParser::jsonOpenFile(QString filename){
     QFile jDocFile;
-    if (a.arguments().length() > 1) {
-        jDocFile.setFileName(a.arguments()[1]);
-    } else {
-        qDebug() << "jDocFile::No filename supplied";
-        return 1;
-    }
+    jDocFile.setFileName(filename);
     if (!jDocFile.exists()) {
         qDebug() << "jDocFile::File not found";
-        return 1;
+        return QJsonDocument();
     }
+
     if (!jDocFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
         qDebug() << "jDocFile::Failed to open";
-        return 1;
+        return QJsonDocument();
     }
     QJsonParseError initError;
     QJsonDocument jDoc = QJsonDocument::fromJson(jDocFile.readAll(),&initError);
@@ -33,19 +63,14 @@ int main(int argc, char *argv[])
         qDebug() << "jDoc:" << initError.errorString();
     if (jDoc.isNull() || jDoc.isEmpty()) {
         qDebug() << "jDoc::IsNull or IsEmpty";
-        return 1;
+        return QJsonDocument();
     }
-
-    jParse.jsonParse(jDoc);
-    //qDebug() << procEnv()->keys();
-
-    qDebug() << "main::No errors encountered";
-    return 0;
+    return jDoc;
 }
 
 int JasonParser::jsonParse(QJsonDocument jDoc){
     QJsonObject mainTree = jDoc.object();
-    foreach(QString key, mainTree.keys()) {
+    foreach(QString key, mainTree.keys()){
 //        qDebug() << key;
         QJsonValue instanceValue = mainTree.value(key);
         if (instanceValue.isArray()){
@@ -62,18 +87,13 @@ int JasonParser::jsonParse(QJsonDocument jDoc){
 void JasonParser::jsonExamineArray(QJsonArray jArray,QString parentKey){
     if (jArray.isEmpty())
         return;
-    qDebug() << "Examining array from" << parentKey;
     for(int i = 0;i<jArray.count();i++){
         QJsonValue instance = jArray.at(i);
-//        returnObject.insert(instance.toString(),instance.toObject().value(instance.toString()));
-//        qDebug()<< instance.toObject().toVariantMap();
         if (instance.isArray()){
-            qDebug() << "Forwarding array";
             jsonExamineArray(instance.toArray(),parentKey);
         } if (instance.isObject()) {
             jsonExamineObject(instance.toObject(),parentKey);
         } else {
-            qDebug() << "Forwarding value";
             jsonExamineValue(instance,parentKey);
         }
     }
@@ -83,7 +103,7 @@ void JasonParser::jsonExamineArray(QJsonArray jArray,QString parentKey){
 void JasonParser::jsonExamineValue(QJsonValue jValue,QString parentKey){
     if (jValue.isNull())
         return;
-    qDebug() << "Examining value from"<<parentKey;
+//    qDebug() << "Examining value from"<<parentKey;
 
     if (parentKey == "launchtype")
         qDebug() << "Program is of type" << jValue.toString();
@@ -91,9 +111,6 @@ void JasonParser::jsonExamineValue(QJsonValue jValue,QString parentKey){
         qDebug() << "Will start in directory" <<jValue.toString();
     if (parentKey == "glxosd")
         qDebug() << "State of GLXOSD:" << jValue.toBool();
-    if (parentKey=="nvidia-optimizations")
-        foreach(QString option,jValue.toString().split(","))
-            qDebug() << "Enabling Nvidia option:" << option;
     return;
 }
 
@@ -101,14 +118,16 @@ void JasonParser::jsonExamineValue(QJsonValue jValue,QString parentKey){
 void JasonParser::jsonExamineObject(QJsonObject jObject, QString parentKey){
     if (jObject.isEmpty())
         return;
-    qDebug() << "Examining object from"<<parentKey;
+//    qDebug() << "Examining object from"<<parentKey;
     foreach(QString key, jObject.keys()){
         if (parentKey == "wine-prerun"){
             if (key == "title")
                 qDebug() << key << jObject.value(key).toString();
             if (key == "priority")
                 qDebug() << key << jObject.value(key).toDouble();
-            if (key == "wine-exec")
+            if (key == "wine.exec")
+                qDebug() << key << jObject.value(key).toString();
+            if (key=="sys.exec")
                 qDebug() << key << jObject.value(key).toString();
         }
         if (parentKey == "wine-postrun"){
@@ -116,18 +135,29 @@ void JasonParser::jsonExamineObject(QJsonObject jObject, QString parentKey){
                 qDebug() << key << jObject.value(key).toString();
             if (key == "priority")
                 qDebug() << key << jObject.value(key).toDouble();
-            if (key == "wine-exec")
+            if (key == "wine.exec")
+                qDebug() << key << jObject.value(key).toString();
+            if (key=="sys.exec")
                 qDebug() << key << jObject.value(key).toString();
         }
         if (parentKey == "variables"){
-            if (key == "value")
-                qDebug() << key << jObject.value(key).toString();
-            if (key == "name")
-                qDebug() << key << jObject.value(key).toString();
+            variableHandle(jObject.value("name").toString(),jObject.value("value").toString());
         }
         if (parentKey == "subsystems"){
             subsystemHandle(jObject);
         }
+        if (parentKey=="imports")
+            if(key=="file")
+                if(!jObject.value(key).toString().isEmpty()){
+                    jsonParse(jsonOpenFile(jObject.value(key).toString()));
+                    qDebug() << "Importing file:" << jObject.value(key).toString();
+                }
+        if (parentKey=="selections"){
+            if(key=="listname")
+                qDebug() << jObject.value(key).toString();
+        }
+        if(key.startsWith("subsystem.",Qt::CaseSensitive))
+            qDebug()<< "Subsystem switch:" << key << jObject.value(key).toString();
     }
 
     return;
@@ -140,15 +170,34 @@ void JasonParser::setEnvVar(QString key, QString value) {
 }
 
 void JasonParser::subsystemHandle(QJsonObject subsystemObject){
-    qDebug() << "Examining subsystem";
+//    qDebug() << "Examining subsystem";
     QString subType;
+    QString enabler;
     foreach(QString key, subsystemObject.keys()){
-        if (key=="type")
+        if(key=="type")
             subType = subsystemObject.value(key).toString();
-        if (key=="enabler")
-            qDebug() << key << subsystemObject.value(key).toString();
+        if(key=="enabler")
+            enabler = subsystemObject.value(key).toString();
+        if(key=="selections")
+            jsonExamineArray(subsystemObject.value(key).toArray(),key);
+        if(key=="environment")
+            jsonExamineArray(subsystemObject.value(key).toArray(),key);
     }
-    qDebug()<<subType;
+    qDebug()<<"Found subsystem:"<<subType<<enabler;
+
 
     return;
+}
+
+void JasonParser::variableHandle(QString key, QString value){
+
+    if(!substituteNames->length()==substituteValues->length()){
+        qDebug() << "Oops! Mismatch between indexes of variable lists! Something is wrong!";
+        return;
+    }
+    qDebug() << "Inserting variable";
+    int i = substituteNames->count();
+    substituteNames->insert(i,key);
+    substituteValues->insert(i,value);
+    qDebug() << *substituteNames << *substituteValues;
 }
