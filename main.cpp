@@ -34,15 +34,20 @@ int main(int argc, char *argv[])
     jDoc = jParse.jsonOpenFile(filename);
     jParse.jsonParse(jDoc);
 
+//    jParse.substitutes[0][0] = "test";e
+    qDebug()<< "bing";
     jParse.testEnvironment();
 
     return 0;
 }
 
 void JasonParser::testEnvironment(){
-//    substituteNames = new QStringList;
-//    substituteValues = new QStringList;
-//    qDebug() << substituteValues;
+    qDebug() << substitutes;
+    qDebug() << subsystems;
+    qDebug() << activeOptions;
+    qDebug() << preparatoryExec;
+    QProcessEnvironment *procEnv = new QProcessEnvironment;
+    qDebug() << procEnv->toStringList();
 }
 
 QJsonDocument JasonParser::jsonOpenFile(QString filename){
@@ -70,97 +75,130 @@ QJsonDocument JasonParser::jsonOpenFile(QString filename){
 
 int JasonParser::jsonParse(QJsonDocument jDoc){
     QJsonObject mainTree = jDoc.object();
+    QHash<QString,QHash<QString,QVariant> > underlyingObjects;
     foreach(QString key, mainTree.keys()){
-//        qDebug() << key;
+        qDebug() << "jsonParse:" << key;
         QJsonValue instanceValue = mainTree.value(key);
-        if (instanceValue.isArray()){
-            jsonExamineArray(instanceValue.toArray(),key);
-        } if (instanceValue.isObject()) {
-            jsonExamineObject(instanceValue.toObject(),key);
-        } else {
-            jsonExamineValue(instanceValue,key);
-        }
+        //Automatically handled
+        if(key=="variables")
+            underlyingObjects.insert("variables",jsonExamineArray(instanceValue.toArray()));
+        if(key=="imports")
+            underlyingObjects.insert("imports",jsonExamineArray(instanceValue.toArray()));
+        if(key=="subsystems")
+            underlyingObjects.insert("subsystems",jsonExamineArray(instanceValue.toArray()));
+        if(key=="wine.prerun")
+            underlyingObjects.insert("wine.prerun",jsonExamineArray(instanceValue.toArray()));
+        if(key=="wine.postrun")
+            underlyingObjects.insert("wine.postrun",jsonExamineArray(instanceValue.toArray()));
+        if((key.startsWith("subsystem.")))
+            activeOptions.insert(key,jsonExamineValue(instanceValue));
+        if((key.endsWith(".workdir")))
+            activeOptions.insert(key,jsonExamineValue(instanceValue));
     }
+    qDebug() << "beep";
     return 0;
 }
 
-void JasonParser::jsonExamineArray(QJsonArray jArray,QString parentKey){
+QHash<QString,QVariant> JasonParser::jsonExamineArray(QJsonArray jArray){
     if (jArray.isEmpty())
-        return;
+        return QHash<QString,QVariant>();
+    QHash<QString,QVariant> returnTable;
     for(int i = 0;i<jArray.count();i++){
         QJsonValue instance = jArray.at(i);
         if (instance.isArray()){
-            jsonExamineArray(instance.toArray(),parentKey);
+            qDebug() << "array";
+            returnTable.insert(instance.toString(),jsonExamineArray(instance.toArray()));
         } if (instance.isObject()) {
-            jsonExamineObject(instance.toObject(),parentKey);
+            qDebug() << "object";
+            returnTable.insert(instance.toString(),jsonExamineObject(instance.toObject()));
         } else {
-            jsonExamineValue(instance,parentKey);
+            qDebug() << "value";
+            returnTable.insert(instance.toString(),jsonExamineValue(instance));
         }
     }
-    return;
+    return returnTable;
 }
 
-void JasonParser::jsonExamineValue(QJsonValue jValue,QString parentKey){
+QVariant JasonParser::jsonExamineValue(QJsonValue jValue){
     if (jValue.isNull())
-        return;
-//    qDebug() << "Examining value from"<<parentKey;
+        return QVariant();
+    QVariant returnValue;
 
-    if (parentKey == "launchtype")
-        qDebug() << "Program is of type" << jValue.toString();
-    if (parentKey == "startdir")
-        qDebug() << "Will start in directory" <<jValue.toString();
-    if (parentKey == "glxosd")
-        qDebug() << "State of GLXOSD:" << jValue.toBool();
-    return;
+//    if (parentKey == "launchtype")
+//        activeOptions.insert("launchtype",jValue.toString());
+//    if (parentKey == "wine.workdir")
+//        activeOptions.insert("wine.workdir",jValue.toString());
+//    if (parentKey.startsWith("subsystem.")){
+//        if(jValue.isBool())
+//            activeOptions.insert(parentKey,jValue.toBool());
+//        if(jValue.isString())
+//            activeOptions.insert(parentKey,jValue.toString());
+//        if(jValue.isDouble())
+//            activeOptions.insert(parentKey,jValue.toDouble());
+//    }
+    if(jValue.isString()){
+        returnValue = jValue.toString();
+    }if(jValue.isDouble()){
+        returnValue = jValue.toDouble();
+    }if(jValue.isBool()){
+        returnValue = jValue.toBool();
+    }
+    return returnValue;
 }
 
 
-void JasonParser::jsonExamineObject(QJsonObject jObject, QString parentKey){
+QHash<QString,QVariant> JasonParser::jsonExamineObject(QJsonObject jObject){
     if (jObject.isEmpty())
-        return;
-//    qDebug() << "Examining object from"<<parentKey;
+        return QHash<QString,QVariant>();
+    QHash<QString,QVariant> returnTable;
     foreach(QString key, jObject.keys()){
-        if (parentKey == "wine-prerun"){
-            if (key == "title")
-                qDebug() << key << jObject.value(key).toString();
-            if (key == "priority")
-                qDebug() << key << jObject.value(key).toDouble();
-            if (key == "wine.exec")
-                qDebug() << key << jObject.value(key).toString();
-            if (key=="sys.exec")
-                qDebug() << key << jObject.value(key).toString();
-        }
-        if (parentKey == "wine-postrun"){
-            if (key == "title")
-                qDebug() << key << jObject.value(key).toString();
-            if (key == "priority")
-                qDebug() << key << jObject.value(key).toDouble();
-            if (key == "wine.exec")
-                qDebug() << key << jObject.value(key).toString();
-            if (key=="sys.exec")
-                qDebug() << key << jObject.value(key).toString();
-        }
-        if (parentKey == "variables"){
-            variableHandle(jObject.value("name").toString(),jObject.value("value").toString());
-        }
-        if (parentKey == "subsystems"){
-            subsystemHandle(jObject);
-        }
-        if (parentKey=="imports")
-            if(key=="file")
-                if(!jObject.value(key).toString().isEmpty()){
-                    jsonParse(jsonOpenFile(jObject.value(key).toString()));
-                    qDebug() << "Importing file:" << jObject.value(key).toString();
-                }
-        if (parentKey=="selections"){
-            if(key=="listname")
-                qDebug() << jObject.value(key).toString();
-        }
-        if(key.startsWith("subsystem.",Qt::CaseSensitive))
-            qDebug()<< "Subsystem switch:" << key << jObject.value(key).toString();
+        if(jObject.value(key).isBool())
+            returnTable.insert(key,jObject.value(key).toBool());
+        if(jObject.value(key).isString())
+            returnTable.insert(key,jObject.value(key).toString());
+        if(jObject.value(key).isDouble())
+            returnTable.insert(key,jObject.value(key).toDouble());
+//        if (parentKey == "wine.prerun"){
+//            if (key == "display.title")
+//                qDebug() << key << jObject.value(key).toString();
+//            if (key == "priority")
+//                qDebug() << key << jObject.value(key).toDouble();
+//            if (key == "wine.exec")
+//                qDebug() << key << jObject.value(key).toString();
+//            if (key=="sys.exec")
+//                qDebug() << key << jObject.value(key).toString();
+//        }
+//        if (parentKey == "wine.postrun"){
+//            if (key=="display.title")
+//                qDebug() << key << jObject.value(key).toString();
+//            if (key=="priority")
+//                qDebug() << key << jObject.value(key).toDouble();
+//            if (key=="wine.exec")
+//                qDebug() << key << jObject.value(key).toString();
+//            if (key=="sys.exec")
+//                qDebug() << key << jObject.value(key).toString();
+//        }
+//        if (parentKey == "variables"){
+//            variableHandle(jObject.value("name").toString(),jObject.value("value").toString());
+//        }
+//        if (parentKey == "subsystems"){
+//            subsystemHandle(jObject);
+//        }
+//        if (parentKey=="imports")
+//            if(key=="file")
+//                if(!jObject.value(key).toString().isEmpty()){
+//                    jsonParse(jsonOpenFile(jObject.value(key).toString()));
+//                    qDebug() << "Importing file:" << jObject.value(key).toString();
+//                }
+//        if (parentKey=="selections"){
+//            if(key=="listname")
+//                qDebug() << jObject.value(key).toString();
+//        }
+//        if(key.startsWith("subsystem.",Qt::CaseSensitive))
+//            qDebug()<< "Subsystem switch:" << key << jObject.value(key).toString();
     }
 
-    return;
+    return returnTable;
 }
 
 void JasonParser::setEnvVar(QString key, QString value) {
@@ -172,32 +210,61 @@ void JasonParser::setEnvVar(QString key, QString value) {
 void JasonParser::subsystemHandle(QJsonObject subsystemObject){
 //    qDebug() << "Examining subsystem";
     QString subType;
-    QString enabler;
+    QString subEnabler;
+    QHash<QString,QVariant> subEnv;
+    QString subAction;
+    QString subVar;
+    //Identify and catch possible values for a subsystem
     foreach(QString key, subsystemObject.keys()){
         if(key=="type")
             subType = subsystemObject.value(key).toString();
         if(key=="enabler")
-            enabler = subsystemObject.value(key).toString();
+            subEnabler = subsystemObject.value(key).toString();
         if(key=="selections")
-            jsonExamineArray(subsystemObject.value(key).toArray(),key);
+            jsonExamineArray(subsystemObject.value(key).toArray());
         if(key=="environment")
-            jsonExamineArray(subsystemObject.value(key).toArray(),key);
+            subEnv = jsonExamineArray(subsystemObject.value(key).toArray());
+        if(key=="action")
+            subAction = subsystemObject.value(key).toString();
+        if(key=="variable")
+            subVar = subsystemObject.value(key).toString();
     }
-    qDebug()<<"Found subsystem:"<<subType<<enabler;
+    QHash<QString, QVariant> insertHash;
+    insertHash.insert("type",subType);
+    if(!subEnabler.isEmpty())
+        insertHash.insert("enabler",subEnabler);
+    if(!subAction.isEmpty())
+        insertHash.insert("action",subAction);
+    if(!subEnv.isEmpty())
+        insertHash.insert("environment",subEnv);
 
+    int i = subsystems.count();
+    subsystems.insert(i,insertHash);
 
     return;
 }
 
 void JasonParser::variableHandle(QString key, QString value){
+    substitutes.insert(key,value);
+}
 
-    if(!substituteNames->length()==substituteValues->length()){
-        qDebug() << "Oops! Mismatch between indexes of variable lists! Something is wrong!";
-        return;
+void JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant> > underlyingObjects){
+    QHash<QString, QVariant> importTable;
+    QHash<QString, QVariant> variablesTable;
+    QHash<QString, QVariant> subsystemTable;
+    QHash<QString, QVariant> prerunTable;
+    QHash<QString, QVariant> postrunTable;
+    foreach(QString key, underlyingObjects.keys()){
+        if(key=="imports")
+            importTable = underlyingObjects.value(key);
+        if(key=="variables")
+            variablesTable = underlyingObjects.value(key);
+        if(key=="subsystems")
+            subsystemTable = underlyingObjects.value(key);
+        if(key=="wine.prerun")
+            prerunTable = underlyingObjects.value(key);
+        if(key=="wine.postrun")
+            postrunTable = underlyingObjects.value(key);
     }
-    qDebug() << "Inserting variable";
-    int i = substituteNames->count();
-    substituteNames->insert(i,key);
-    substituteValues->insert(i,value);
-    qDebug() << *substituteNames << *substituteValues;
+    qDebug() << importTable;
 }

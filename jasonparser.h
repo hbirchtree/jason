@@ -28,20 +28,23 @@ public:
 
     //JSON
     QJsonDocument jsonOpenFile(QString filename);
-    void jsonExamineArray(QJsonArray jArray,QString parentKey);
-    void jsonExamineValue(QJsonValue jValue,QString parentKey);
-    void jsonExamineObject(QJsonObject jObject,QString parentKey);
+    QHash<QString,QVariant> jsonExamineArray(QJsonArray jArray);
+    QVariant jsonExamineValue(QJsonValue jValue);
+    QHash<QString,QVariant> jsonExamineObject(QJsonObject jObject);
 
-    //Option-handlers
+    //Handlers
     void subsystemHandle(QJsonObject subsystemObject);
-    void setEnvVar(QString key, QString value);
-
+    void setEnvVar(QString key, QString value); QProcessEnvironment *procEnv();
     void variableHandle(QString key, QString value);
-    QStringList *substituteNames;
-    QStringList *substituteValues;
+    void parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
+
+    //Associative arrays
+    QHash<QString, QString> substitutes;
+    QHash<int, QHash<QString,QVariant> > subsystems;
+    QHash<QString,QVariant> activeOptions;
+    QHash<int,QHash<QString,QString> > preparatoryExec;
 
 private:
-    QProcessEnvironment *procEnv();
 };
 
 #endif // JASONPARSER_H
