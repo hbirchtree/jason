@@ -1,0 +1,49 @@
+{
+	"imports":
+	[
+		{
+			"file": "native-common.json"
+		}
+	],
+	"variables":
+	[
+		{
+			"name": "STEAMAPPS",
+			"value": "%HOME%/.local/share/wineprefixes/Steam/drive_c/Program Files/Steam/steamapps/common"
+		},
+		{
+			"name": "WINEPREFIX_ROOT",
+			"value": "%HOME%/.local/share/wineprefixes"
+		},
+		{
+			"name": "TOOLS",
+			"value": "%HOME%/.local/share/winescripts/tools"
+		},
+		{
+			"name": "WINEBUILDS",
+			"value": "%HOME%/.local/share/wineversions"
+		}
+	],
+	"subsystems":
+	[
+		{
+			"type": "constant",
+			"environment":
+			[
+				{
+					"type": "variable",
+					"name": "PULSE_LATENCY_MSEC",
+					"value": "60"
+				}
+			]
+		}
+		
+	],
+	"wine.postrun":
+	[
+		{
+			"title": "Setting gamma",
+			"exec": "xgamma -gamma 1.0"
+		}
+	]
+}
