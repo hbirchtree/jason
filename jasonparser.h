@@ -33,7 +33,7 @@ public:
     QHash<QString,QVariant> jsonExamineObject(QJsonObject jObject);
 
     //Handlers
-    void subsystemHandle(QJsonObject subsystemObject);
+    void subsystemHandle(QHash<QString,QVariant> subsystemElement);
     void setEnvVar(QString key, QString value); QProcessEnvironment *procEnv();
     void variableHandle(QString key, QString value);
     void parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
@@ -42,6 +42,7 @@ public:
     QHash<QString, QString> substitutes;
     QHash<int, QHash<QString,QVariant> > subsystems;
     QHash<QString,QVariant> activeOptions;
+    QHash<QString,QVariant> systemTable;
     QHash<int,QHash<QString,QString> > preparatoryExec;
 
 private:
