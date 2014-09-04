@@ -31,9 +31,28 @@
 			"environment":
 			[
 				{
-					"type": "variable",
 					"name": "PULSE_LATENCY_MSEC",
 					"value": "60"
+				}
+			]
+		},
+		{
+			"type": "variable",
+			"enabler": "wine.version",
+			"variable": "WINEVERSION",
+			"environment":
+			[
+				{
+					"name": "PATH",
+					"value": "%PATH%:%WINEBUILDS%/%WINEVERSION%/bin"
+				},
+				{
+					"name": "LD_LIBRARY_PATH",
+					"value": "%LD_LIBRARY_PATH%:%WINEBUILDS%/%WINEVERSION%/lib:%WINEBUILDS%/lib64"
+				},
+				{
+					"name": "XDG_DATA_DIRS",
+					"value": "%XDG_DATA_DIRS%:%WINEBUILDS%/%WINEVERSION%/share"
 				}
 			]
 		}

@@ -6,7 +6,7 @@
 			"file": "common.json"
 		}
 	],
-	"wine.wpid": "Steam",
+	"wine.wineprefix-id": "Steam",
 	"subsystem.xboxlayout": "xpad",
 	"subsystem.glxosd": true,
 	"subsystem.xinput-mouse-profile": "noaccel",
