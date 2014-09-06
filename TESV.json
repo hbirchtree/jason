@@ -11,7 +11,7 @@
 	"subsystem.glxosd": true,
 	"subsystem.xinput-mouse-profile": "noaccel",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
-	"wine.workdir": "%PREFIX%/Skyrim",
+	"wine.workdir": "%WINEPREFIX%/Skyrim",
 	"wine.exec": "skse_loader.exe",
 	"variables":
 	[

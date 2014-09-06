@@ -35,11 +35,36 @@
 					"value": "60"
 				}
 			]
-		},
+		}
+		
+	],
+	"wine.postrun":
+	[
 		{
-			"type": "variable",
-			"enabler": "wine.version",
-			"variable": "WINEVERSION",
+			"title": "Setting gamma",
+			"sys.exec": "xgamma -gamma 1.0"
+		}
+	],
+	"systems":
+	[
+		{
+			"type": "launcher",
+			"config-prefix": "wine",
+			"launch-prefix": "wine",
+			"": "",
+			"variables":
+			[
+				{
+					"type": "config-input",
+					"name": "WINEVERSION",
+					"input": "version"
+				},
+				{
+					"type": "config-input",
+					"name": "WINEPREFIX_ID",
+					"input": "wineprefix-id"
+				}
+			],
 			"environment":
 			[
 				{
@@ -53,16 +78,23 @@
 				{
 					"name": "XDG_DATA_DIRS",
 					"value": "%XDG_DATA_DIRS%:%WINEBUILDS%/%WINEVERSION%/share"
+				},
+				{
+					"name": "WINEPREFIX",
+					"value": "%WINEPREFIX_ROOT%/%WINEPREFIX_ID%"
 				}
 			]
-		}
-		
-	],
-	"wine.postrun":
-	[
+		},
 		{
-			"title": "Setting gamma",
-			"exec": "xgamma -gamma 1.0"
+			"type": "launcher",
+			"config-prefix": "sys",
+			"launch-prefix": "",
+			"actions":
+			[
+				{
+					"type": "prelaunch"
+				}
+			]
 		}
 	]
 }
