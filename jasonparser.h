@@ -21,7 +21,7 @@
 class JasonParser : public QObject
 {
 public:
-    int jsonParse(QJsonDocument jDoc);
+    int jsonParse(QJsonDocument jDoc,int level);
 
     //General
     void testEnvironment();
@@ -34,9 +34,15 @@ public:
 
     //Handlers
     void subsystemHandle(QHash<QString,QVariant> subsystemElement);
-    void setEnvVar(QString key, QString value); QProcessEnvironment *procEnv();
+    void setEnvVar(QString key, QString value);
+    QProcessEnvironment procEnv;
     void variableHandle(QString key, QString value);
+    void resolveVariables();
+    QString resolveVariable(QString variable);
     void parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
+    void desktopFileBuild(QJsonObject desktopObject);
+    void parseImportArray(QJsonArray imports);
+    void systemHandle(QHash<QString,QVariant> systemElement);
 
     //Associative arrays
     QHash<QString, QString> substitutes;

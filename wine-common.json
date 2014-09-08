@@ -12,6 +12,10 @@
 			"value": "%HOME%/.local/share/wineprefixes/Steam/drive_c/Program Files/Steam/steamapps/common"
 		},
 		{
+			"name": "WINEPREFIX",
+			"value": "%WINEPREFIX_ROOT%/%WINEPREFIX_ID%"
+		},
+		{
 			"name": "WINEPREFIX_ROOT",
 			"value": "%HOME%/.local/share/wineprefixes"
 		},
@@ -49,9 +53,9 @@
 	[
 		{
 			"type": "launcher",
+			"identifier": "winery",
 			"config-prefix": "wine",
 			"launch-prefix": "wine",
-			"": "",
 			"variables":
 			[
 				{

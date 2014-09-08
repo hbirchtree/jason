@@ -3,7 +3,7 @@
 	"imports":
 	[
 		{
-			"file": "common.json"
+			"file": "wine-common.json"
 		}
 	],
 	"wine.wineprefix-id": "Steam",
@@ -12,6 +12,7 @@
 	"subsystem.xinput-mouse-profile": "noaccel",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
 	"wine.workdir": "%WINEPREFIX%/Skyrim",
+	"wine.version":"1.7.24-csmt",
 	"wine.exec": "skse_loader.exe",
 	"variables":
 	[
@@ -57,6 +58,7 @@
 		"desktop.wmclass": "TESV.exe",
 		"desktop.action":
 		{
+			"action-id": "launcher",
 			"desktop.displayname": "Skyrim launcher",
 			"wine.exec": "SkyrimLauncher.exe",
 			"wine.workdir": "%STEAMAPPS%/Skyrim"
