@@ -44,6 +44,11 @@ public:
     void parseImportArray(QJsonArray imports);
     void systemHandle(QHash<QString,QVariant> systemElement);
 
+    //Active options
+    void systemActivate(QHash<QString,QVariant> systemElement);
+    void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option);
+    QHash<QString,QVariant> createExecutionQueue(QString launchType);
+
     //Associative arrays
     QHash<QString, QString> substitutes;
     QHash<int, QHash<QString,QVariant> > subsystems;

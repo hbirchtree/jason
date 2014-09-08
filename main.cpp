@@ -1,4 +1,3 @@
-//#include "jason.h"
 #include "jasonparser.h"
 #include <QCoreApplication>
 
@@ -19,9 +18,13 @@ int main(int argc, char *argv[])
     cParse.setApplicationDescription("Jason launcher");
     cParse.addHelpOption();
     cParse.addPositionalArgument("file",QCoreApplication::translate("init","File to open"));
+    QCommandLineOption desktopAction = QCommandLineOption("action",QCoreApplication::translate("init","Action within the Jason document to launch"),"action","");
+    desktopAction.setValueName("action");
+    cParse.addOption(desktopAction);
     //Actual processing
     cParse.process(a);
 
+    //Required arguments
     QStringList posArgs = cParse.positionalArguments();
     QString filename;
     if (posArgs.length()>=1){
@@ -29,10 +32,19 @@ int main(int argc, char *argv[])
     } else
         return 0;
 
+    //Optional arguments
+    QStringList options = cParse.optionNames();
+    QString actionToLaunch;
+    foreach(QString option, options){
+        if(option=="action")
+            actionToLaunch = cParse.value(option);
+    }
+
     //Open document
     QJsonDocument jDoc;
     jDoc = jParse.jsonOpenFile(filename);
-    jParse.jsonParse(jDoc,1);
+    if(jParse.jsonParse(jDoc,1)!=0)
+        qDebug() << "Something horrible happened! Call the fire department!";
 
     qDebug()<< "bing";
     jParse.testEnvironment();
@@ -104,7 +116,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
          *  - .prerun is used in conjunction with systems to run commands before the actual
          * program is run.
          *  - .postrun is used to run commands after the program has run.
-         *  - subsystem. is prepended to subsystem enablers as a means of identifying them.
+         *  - information is only gathered in this phase unless it is a subsystem of type constant, is a
+         * global variable
          */
         if(key=="systems")
             underlyingObjects.insert("systems",jsonExamineArray(instanceValue.toArray()));
@@ -115,11 +128,11 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
             underlyingObjects.insert("imports",jsonExamineArray(instanceValue.toArray()));
         if(key=="subsystems")
             underlyingObjects.insert("subsystems",jsonExamineArray(instanceValue.toArray()));
-        if(key.endsWith(".prerun"))
-            qDebug() << instanceValue.toArray();
+//        if(key.endsWith(".prerun"))
+//            qDebug() << jsonExamineArray(instanceValue.toArray());
 //            underlyingObjects.insert("prerun",jsonExamineArray(instanceValue.toArray()));
-        if(key.endsWith(".postrun"))
-            qDebug() << instanceValue.toArray();
+//        if(key.endsWith(".postrun"))
+//            qDebug() << jsonExamineArray(instanceValue.toArray());
 //            underlyingObjects.insert("postrun",jsonExamineArray(instanceValue.toArray()));
     }
     parseUnderlyingObjects(underlyingObjects);
@@ -140,24 +153,39 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
             activeOptions.insert(key,jsonExamineValue(instanceValue));
         if(key=="desktop.file")
             desktopFileBuild(instanceValue.toObject());
-//        if(key=="imports"){
-//            QJsonArray importArray = instanceValue.toArray();
-//            for(int i = 0;i<importArray.count();i++){
-//                jsonParse(jsonOpenFile(importArray.at(i).toObject().value("file").toString()),2);
-//            }
-//        }
         foreach(QString systemKey,systemTable.keys()){
             if((key.startsWith(systemKey))&&(!instanceValue.toString().isEmpty()))
                 activeOptions.insert(key,instanceValue.toString());
         }
+        if(key=="launchtype")
+            activeOptions.insert(key,instanceValue.toString());
     }
 
-    qDebug() << activeOptions;
+//    qDebug() << activeOptions;
 /*
  * The active options have been listed and need to be parsed. With this it needs to look for
  * active subsystems and apply their options, prepare a list of programs to execute with QProcess
  * and prepare the system for launch.
+ * Systems have default switches such as .exec and .workdir, but can also define variables according to a
+ * switch, ex. wine.version referring to the internal variable %WINEVERSION%.
+ * Subsystems will be triggered according to their type and what option is entered.
+ *
 */
+    foreach(QString option,activeOptions.keys()){
+        if(option=="launchtype"){
+            if(!systemTable.value(activeOptions.value("launchtype").toString()).isValid())
+                return 1;
+            QHash<QString,QVariant> currentSystem = systemTable.value(activeOptions.value("launchtype").toString()).toHash();
+//            systemActivate(currentSystem);
+        }
+        if(option.startsWith("subsystem.")){
+            QString subsystemName = option;
+            subsystemName.remove("subsystem.");
+            foreach(int sub,subsystems.keys())
+                if(subsystems.value(sub).value("enabler")==subsystemName)
+                    subsystemActivate(subsystems.value(sub),activeOptions.value(option).toString());
+        }
+    }
 
     return 0;
 }
@@ -231,8 +259,9 @@ void JasonParser::setEnvVar(QString key, QString value) {
 void JasonParser::subsystemHandle(QHash<QString,QVariant> subsystemElement){
     QString subType;
     QString subEnabler;
-    QHash<QString,QVariant> subEnv;
+    QVector<QVariant> subEnv;
     QHash<QString,QVariant> selections;
+    QHash<QString,QVariant> options;
     QString subAction;
     QString subVar;
     //Identify and catch possible values for a subsystem
@@ -241,15 +270,30 @@ void JasonParser::subsystemHandle(QHash<QString,QVariant> subsystemElement){
             subType = subsystemElement.value(key).toString();
         if(key=="enabler")
             subEnabler = subsystemElement.value(key).toString();
-        if(key=="selections")
-            foreach(QString key, subsystemElement.value(key).toHash().keys())
-                qDebug() << key;
+        if(key=="selections"){
+            QJsonArray selectArray = subsystemElement.value(key).toJsonArray();
+            for(int i = 0;i<selectArray.count();i++){
+                QJsonObject selectObject = selectArray.at(i).toObject();
+                QString listname = selectObject.value("listname").toString();
+                selectObject.remove(listname);
+                selections.insert(listname,selectObject);
+            }
+        }
         if(key=="environment")
             for(int i=0;i<subsystemElement.value(key).toJsonArray().count();i++){
                 QHash<QString,QVariant> envTable = jsonExamineObject(subsystemElement.value(key).toJsonArray().at(i).toObject());
-                if((envTable.value("name").isValid()&&(envTable.value("value").isValid())))
-                        subEnv.insert(envTable.value("name").toString(),envTable.value("value").toString());
+                subEnv.insert(subEnv.count(),envTable);
             }
+        if(key=="options"){
+            QJsonArray optionArray = subsystemElement.value(key).toJsonArray();
+            for(int i = 0;i<optionArray.count();i++){
+                QJsonObject optionObject = optionArray.at(i).toObject();
+                QString optName = optionObject.value("listname").toString();
+                optionObject.remove(optName);
+                options.insert(optName,optionObject);
+            }
+        }
+
         if(key=="action")
             subAction = subsystemElement.value(key).toString();
         if(key=="variable")
@@ -264,15 +308,19 @@ void JasonParser::subsystemHandle(QHash<QString,QVariant> subsystemElement){
         if(!subAction.isEmpty())
             insertHash.insert("action",subAction);
         if(!subEnv.isEmpty())
-            insertHash.insert("environment",subEnv);
+            insertHash.insert("environment",subEnv.toList());
+        if(!options.isEmpty())
+            insertHash.insert("options",options);
+        if(!selections.isEmpty())
+            insertHash.insert("selections",selections);
         int i = subsystems.count();
         subsystems.insert(i,insertHash);
-    } else {
-        foreach(QString key,subEnv.keys())
-            if(!subEnv.value(key).isNull()){
-                setEnvVar(key,subEnv.value(key).toString());
+    } else
+        for(int i=0;i<subEnv.count();i++)
+            if(!subEnv.at(i).isNull()){
+                QString key = subEnv.at(i).toHash().value("name").toString();
+                setEnvVar(key,subEnv.at(i).toHash().value("value").toString());
             }
-    }
 
     return;
 }
@@ -318,7 +366,6 @@ void JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant>
         subsystemHandle(subsystemTable.value(key).toHash());
     foreach(QString key,systemTTable.keys())
         systemHandle(systemTTable.value(key).toHash());
-    qDebug() << postrunTable;
     foreach(QString key,prerunTable.keys()){
         int priority;
         QString title;
@@ -378,26 +425,30 @@ QString JasonParser::resolveVariable(QString variable){
 }
 
 void JasonParser::desktopFileBuild(QJsonObject desktopObject){
-    foreach(QString key, desktopObject.keys()){
-        if(key=="desktop.displayname")
-            qDebug() << desktopObject.value(key).toString();
-        if(key=="desktop.description")
-            qDebug() << desktopObject.value(key).toString();
-        if(key=="desktop.wmclass")
-            qDebug() << desktopObject.value(key).toString();
-        if(key=="desktop.icon")
-            qDebug() << desktopObject.value(key).toString();
-        if(key=="desktop.action"){
-            QJsonObject action = desktopObject.value(key).toObject();
-            foreach(QString actKey, action.keys())
-                qDebug() << actKey << action.value(actKey).toString();
-        }
-    }
+/*
+ * Desktop files execute by ./Jason [JSON-file]
+ * A desktop action entry will use the appendage of --action [id] to make a distinction between the
+ * different entries that may exist.
+*/
+//    foreach(QString key, desktopObject.keys()){
+//        if(key=="desktop.displayname")
+//            qDebug() << desktopObject.value(key).toString();
+//        if(key=="desktop.description")
+//            qDebug() << desktopObject.value(key).toString();
+//        if(key=="desktop.wmclass")
+//            qDebug() << desktopObject.value(key).toString();
+//        if(key=="desktop.icon")
+//            qDebug() << desktopObject.value(key).toString();
+//        if(key=="desktop.action"){
+//            QJsonObject action = desktopObject.value(key).toObject();
+//            foreach(QString actKey, action.keys())
+//                qDebug() << actKey << action.value(actKey).toString();
+//        }
+//    }
     return;
 }
 
 void JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
-    //Stage 1
     QHash<QString,QVariant> systemHash;
     foreach(QString key, systemElement.keys()){
         if(key=="config-prefix")
@@ -408,19 +459,20 @@ void JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
             systemHash.insert(key,systemElement.value(key).toString());
         if(key=="identifier") //the different keys found in "launchtype"
             systemHash.insert(key,systemElement.value(key).toString());
+        if(key=="variables") //internal variables, with different types such as config-input
+            systemHash.insert(key,systemElement.value(key).toJsonArray());
+        if(key=="environment") //environment settings
+            systemHash.insert(key,systemElement.value(key).toJsonArray());
     }
-    QString configPrefix = systemHash.value("config-prefix").toString();
-    foreach(QString key, systemElement.keys()){
-        if(key=="variables"){
-            QJsonArray vArray = systemElement.value(key).toJsonArray();
-            for(int i=0;i<vArray.count();i++){
-                qDebug() << "new variable";
-                QJsonObject vObject = vArray.at(i).toObject();
-                foreach(QString vKey, vObject.keys()){
-                    qDebug() << vKey << jsonExamineValue(vObject.value(vKey)).toString();
-                }
-            }
-        }
+    systemTable.insert(systemHash.value("identifier").toString(),systemHash);
+}
+
+void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, QVariant option){
+    QString type;
+    foreach(QString key,subsystemElement.keys()){
+        if(key=="type")
+            type = subsystemElement.value(key).toString();
     }
-    systemTable.insert(systemHash.value("config-prefix").toString(),systemHash);
+    qDebug() << type << option;
+    qDebug() << subsystemElement;
 }
