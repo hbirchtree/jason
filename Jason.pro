@@ -12,8 +12,6 @@ TARGET = Jason
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        jason.cpp
+SOURCES += main.cpp
 
-HEADERS  += jason.h \
-    jasonparser.h
+HEADERS  += jasonparser.h
