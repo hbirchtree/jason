@@ -44,17 +44,19 @@ public:
     void parseImportArray(QJsonArray imports);
     void systemHandle(QHash<QString,QVariant> systemElement);
 
-    //Active options
-    void systemActivate(QHash<QString,QVariant> systemElement);
-    void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option);
+    //Activate options
+    void systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
+    void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option,QStringList activeSystems);
     QHash<QString,QVariant> createExecutionQueue(QString launchType);
+    void environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems);
+    void addToRuntime(QString role,QVariant input);
 
     //Associative arrays
     QHash<QString, QString> substitutes;
     QHash<int, QHash<QString,QVariant> > subsystems;
     QHash<QString,QVariant> activeOptions;
     QHash<QString,QVariant> systemTable;
-    QHash<int,QHash<QString,QString> > preparatoryExec;
+    QHash<QString,QVariant> runtimeValues;
 
 private:
 };

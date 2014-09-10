@@ -11,6 +11,7 @@
 	"subsystem.glxosd": true,
 	"subsystem.xinput-mouse-profile": "noaccel",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
+	"subsystem.gametimer": "Skyrim",
 	"wine.workdir": "%WINEPREFIX%/Skyrim",
 	"wine.version":"1.7.24-csmt",
 	"wine.exec": "skse_loader.exe",
@@ -23,10 +24,6 @@
 		{
 			"name": "UNDERLAY",
 			"value": "%STEAMAPPS%/Skyrim.original"
-		},
-		{
-			"name": "GAMETIMER_LABEL",
-			"value": "Skyrim"
 		}
 	],
 	"wine.prerun":

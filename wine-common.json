@@ -35,6 +35,7 @@
 			"environment":
 			[
 				{
+					"type": "variable",
 					"name": "PULSE_LATENCY_MSEC",
 					"value": "60"
 				}
@@ -55,6 +56,7 @@
 			"type": "launcher",
 			"identifier": "winery",
 			"config-prefix": "wine",
+			"inherit": "system",
 			"launch-prefix": "wine",
 			"variables":
 			[
@@ -72,18 +74,22 @@
 			"environment":
 			[
 				{
+					"type": "variable",
 					"name": "PATH",
 					"value": "%PATH%:%WINEBUILDS%/%WINEVERSION%/bin"
 				},
 				{
+					"type": "variable",
 					"name": "LD_LIBRARY_PATH",
-					"value": "%LD_LIBRARY_PATH%:%WINEBUILDS%/%WINEVERSION%/lib:%WINEBUILDS%/lib64"
+					"value": "%WINEBUILDS%/%WINEVERSION%/lib:%WINEBUILDS%/%WINEVERSION%/lib64"
 				},
 				{
+					"type": "variable",
 					"name": "XDG_DATA_DIRS",
 					"value": "%XDG_DATA_DIRS%:%WINEBUILDS%/%WINEVERSION%/share"
 				},
 				{
+					"type": "variable",
 					"name": "WINEPREFIX",
 					"value": "%WINEPREFIX_ROOT%/%WINEPREFIX_ID%"
 				}
@@ -91,12 +97,15 @@
 		},
 		{
 			"type": "launcher",
+			"identifier": "system",
 			"config-prefix": "sys",
 			"launch-prefix": "",
-			"actions":
+			"environment":
 			[
 				{
-					"type": "prelaunch"
+					"type": "variable",
+					"name": "IS_RUN_WITH_JASON",
+					"value": "1"
 				}
 			]
 		}

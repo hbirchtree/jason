@@ -7,7 +7,7 @@
 		},
 		{
 			"name": "XINPUT_MOUSE",
-			"value": "Logitech USB-PS/2 Optical Mouse"
+			"value": "'Logitech USB-PS/2 Optical Mouse'"
 		}
 	],
 	"subsystems":
@@ -24,8 +24,9 @@
 			]
 		},
 		{
-			"type": "bool",
+			"type": "substitution",
 			"enabler": "gametimer",
+			"variable": "GAMETIMER_LABEL",
 			"environment":
 			[
 				{
@@ -71,7 +72,7 @@
 		{
 			"type": "select",
 			"enabler": "xinput-mouse-profile",
-			"action": "xinput set-prop %XINPUT_MOUSE_DEVICE% %VARIABLE% %VALUE%",
+			"action": "xinput set-prop %XINPUT_MOUSE% %VARIABLE% %VALUE%",
 			"selections":
 			[
 				{
@@ -79,11 +80,11 @@
 					"variables":
 					[
 						{
-							"name": "Device Accel Profile",
+							"name": "'Device Accel Profile'",
 							"value": "-1"
 						},
 						{
-							"name": "Device Accel Constant Deceleration",
+							"name": "'Device Accel Constant Deceleration'",
 							"value": "1.5"
 						}
 					]
@@ -93,11 +94,11 @@
 					"variables":
 					[
 						{
-							"name": "Device Accel Profile",
+							"name": "'Device Accel Profile'",
 							"value": "0"
 						},
 						{
-							"name": "Device Accel Constant Deceleration",
+							"name": "'Device Accel Constant Deceleration'",
 							"value": "1"
 						}
 					]
