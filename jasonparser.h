@@ -50,16 +50,24 @@ public:
     QHash<QString,QVariant> createExecutionQueue(QString launchType);
     void environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems);
     void variablesImport(QHash<QString,QVariant> variables);
-    void addToRuntime(QString role,QVariant input); //For
+    void addToRuntime(QString role,QVariant input);
+    void insertPrerunPostrun(QHash<QString,QVariant> runtable,int mode); //int mode is used to differentiate between post- and prerun tables, where prerun is 0 and postrun is 1. It's ugly.
 
-    //Associative arrays
+    //Fucking finally
+    int executeProcess();
+
+    //Hashes/arrays/vectors
     QHash<QString, QString> substitutes;
     QHash<int, QHash<QString,QVariant> > subsystems;
     QHash<QString,QVariant> activeOptions;
     QHash<QString,QVariant> systemTable;
-    QHash<QString,QVariant> runtimeValues;
+    QHash<QString,QVector<QVariant> > runtimeValues;
+    QStringList importedFiles;
 
 private:
+
+public slots:
+
 };
 
 #endif // JASONPARSER_H

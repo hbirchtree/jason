@@ -10,7 +10,6 @@
 	"subsystem.xboxlayout": "xpad",
 	"subsystem.glxosd": true,
 	"subsystem.xinput-mouse-profile.pre": "noaccel",
-	"subsystem.xinput-mouse-profile.post": "desktop",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
 	"subsystem.gametimer": "Skyrim",
 	"wine.workdir": "%WINEPREFIX%/Skyrim",
@@ -35,7 +34,7 @@
 			"sys.exec": "gksudo --description \"mounting overlayfs\" -- mount -t overlayfs -o lowerdir=\"%UNDERLAY%\",upperdir=\"%OVERLAY%\",rw overlayfs \"%STARTDIR%\""
 		},
 		{
-			"display.title": "Wine LBA patch",
+			"display.title": "Patching binary with LBA patch",
 			"wine.exec": "%TOOLS%/wine-lba-patch.exe",
 			"wine.workdir": "%STEAMAPPS%/Skyrim"
 		}

@@ -1,4 +1,5 @@
 {
+	"subsystem.xinput-mouse-profile.post": "desktop",
 	"variables":
 	[
 		{

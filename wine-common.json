@@ -46,7 +46,7 @@
 	"wine.postrun":
 	[
 		{
-			"title": "Setting gamma",
+			"title": "Setting display gamma",
 			"sys.exec": "xgamma -gamma 1.0"
 		}
 	],
@@ -64,6 +64,18 @@
 					"type": "config-input",
 					"name": "WINEVERSION",
 					"input": "version"
+				},
+				{
+					"type": "config-input",
+					"name": "WINEDLLOVERRIDES",
+					"input": "dlloverrides",
+					"default": "winemenubuilder.exe=d"
+				},
+				{
+					"type": "config-input",
+					"name": "WINEDEBUG",
+					"input": "debug-opts",
+					"default": "-all"
 				},
 				{
 					"type": "config-input",
@@ -85,6 +97,16 @@
 				},
 				{
 					"type": "variable",
+					"name": "WINEDLLOVERRIDES",
+					"value": "%WINEDLLOVERRIDES%"
+				},
+				{
+					"type": "variable",
+					"name": "WINEARCH",
+					"value": "win32"
+				},
+				{
+					"type": "variable",
 					"name": "XDG_DATA_DIRS",
 					"value": "%XDG_DATA_DIRS%:%WINEBUILDS%/%WINEVERSION%/share"
 				},
@@ -92,6 +114,11 @@
 					"type": "variable",
 					"name": "WINEPREFIX",
 					"value": "%WINEPREFIX%"
+				},
+				{
+					"type": "variable",
+					"name": "WINEDEBUG",
+					"value": "%WINEDEBUG%"
 				}
 			]
 		},
