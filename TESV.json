@@ -9,7 +9,8 @@
 	"wine.wineprefix-id": "Steam",
 	"subsystem.xboxlayout": "xpad",
 	"subsystem.glxosd": true,
-	"subsystem.xinput-mouse-profile": "noaccel",
+	"subsystem.xinput-mouse-profile.pre": "noaccel",
+	"subsystem.xinput-mouse-profile.post": "desktop",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
 	"subsystem.gametimer": "Skyrim",
 	"wine.workdir": "%WINEPREFIX%/Skyrim",
@@ -34,7 +35,6 @@
 			"sys.exec": "gksudo --description \"mounting overlayfs\" -- mount -t overlayfs -o lowerdir=\"%UNDERLAY%\",upperdir=\"%OVERLAY%\",rw overlayfs \"%STARTDIR%\""
 		},
 		{
-			"priority": 1,
 			"display.title": "Wine LBA patch",
 			"wine.exec": "%TOOLS%/wine-lba-patch.exe",
 			"wine.workdir": "%STEAMAPPS%/Skyrim"
@@ -43,6 +43,7 @@
 	"wine.postrun":
 	[
 		{
+			"priority": 1,
 			"display.title": "Unmounting overlayfs",
 			"sys.exec": "gksudo -- umount \"%STEAMAPPS%/Skyrim\""
 		}

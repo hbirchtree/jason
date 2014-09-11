@@ -15,10 +15,15 @@
 		{
 			"type": "bool",
 			"enabler": "glxosd",
+			"appearance":
+			{
+				"desktop.icon": "",
+				"desktop.title": "Displaying GPU stats"
+			},
 			"environment":
 			[
 				{
-					"type": "exec-prefix",
+					"type": "run-prefix",
 					"sys.exec.prefix": "%TOOLS%/glxosd/glxosd"
 				}
 			]
@@ -27,17 +32,39 @@
 			"type": "substitution",
 			"enabler": "gametimer",
 			"variable": "GAMETIMER_LABEL",
+			"appearance":
+			{
+				"desktop.icon": "",
+				"desktop.title": "Recording game time"
+			},
 			"environment":
 			[
 				{
-					"type": "exec-prefix",
+					"type": "run-prefix",
 					"sys.exec.prefix": "/usr/bin/time --format=%e -a -o %GAMETIMER_DIR%/%GAMETIMER_LABEL%.log"
 				}
 			]
 		},
 		{
+			"type": "substitution",
+			"enabler": "xboxlayout",
+			"appearance":
+			{
+				"desktop.icon": "",
+				"desktop.title": "Modifying Xbox 360 controller layout"
+			},
+			"variable": "XBOX_CONTROL_LAYOUT",
+			"sys.exec": "xboxmgr --config --layout '%XBOX_CONTROL_LAYOUT%'",
+			"trigger": "sys-prerun"
+		},
+		{
 			"type": "option",
 			"enabler": "nvidia-optimizations",
+			"appearance":
+			{
+				"desktop.icon": "",
+				"desktop.title": "Setting Nvidia OpenGL options"
+			},
 			"options":
 			[
 				{
@@ -71,8 +98,56 @@
 		},
 		{
 			"type": "select",
-			"enabler": "xinput-mouse-profile",
-			"action": "xinput set-prop %XINPUT_MOUSE% %VARIABLE% %VALUE%",
+			"enabler": "xinput-mouse-profile.pre",
+			"trigger": "sys-prerun",
+			"sys.exec": "xinput set-prop %XINPUT_MOUSE% %VARIABLE% %VALUE%",
+			"appearance":
+			{
+				"desktop.icon": "mouse",
+				"desktop.title": "Setting mouse profile"
+			},
+			"selections":
+			[
+				{
+					"listname": "noaccel",
+					"variables":
+					[
+						{
+							"name": "'Device Accel Profile'",
+							"value": "-1"
+						},
+						{
+							"name": "'Device Accel Constant Deceleration'",
+							"value": "1.5"
+						}
+					]
+				},
+				{
+					"listname": "desktop",
+					"variables":
+					[
+						{
+							"name": "'Device Accel Profile'",
+							"value": "0"
+						},
+						{
+							"name": "'Device Accel Constant Deceleration'",
+							"value": "1"
+						}
+					]
+				}
+			]
+		},
+		{
+			"type": "select",
+			"enabler": "xinput-mouse-profile.post",
+			"trigger": "sys-postrun",
+			"sys.exec": "xinput set-prop %XINPUT_MOUSE% %VARIABLE% %VALUE%",
+			"appearance":
+			{
+				"desktop.icon": "mouse",
+				"desktop.title": "Resetting mouse profile"
+			},
 			"selections":
 			[
 				{

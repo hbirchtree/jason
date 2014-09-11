@@ -9,7 +9,7 @@
 	[
 		{
 			"name": "STEAMAPPS",
-			"value": "%HOME%/.local/share/wineprefixes/Steam/drive_c/Program Files/Steam/steamapps/common"
+			"value": "%WINEPREFIX_ROOT%/Steam/drive_c/Program Files/Steam/steamapps/common"
 		},
 		{
 			"name": "WINEPREFIX",
@@ -91,7 +91,7 @@
 				{
 					"type": "variable",
 					"name": "WINEPREFIX",
-					"value": "%WINEPREFIX_ROOT%/%WINEPREFIX_ID%"
+					"value": "%WINEPREFIX%"
 				}
 			]
 		},
@@ -99,7 +99,7 @@
 			"type": "launcher",
 			"identifier": "system",
 			"config-prefix": "sys",
-			"launch-prefix": "",
+			"launch-prefix": "sh",
 			"environment":
 			[
 				{
