@@ -19,8 +19,11 @@ int main(int argc, char *argv[])
     cParse.addHelpOption();
     cParse.addPositionalArgument("file",QCoreApplication::translate("init","File to open"));
     QCommandLineOption desktopAction = QCommandLineOption("action",QCoreApplication::translate("init","Action within the Jason document to launch"),"action","");
+    QCommandLineOption desktopGen = QCommandLineOption("desktop-file-generate",QCoreApplication::translate("init","Create a desktop file"),"desktop-file-generate","");
     desktopAction.setValueName("action");
+    desktopGen.setValueName("output .desktop file");
     cParse.addOption(desktopAction);
+    cParse.addOption(desktopGen);
     //Actual processing
     cParse.process(a);
 
@@ -35,16 +38,26 @@ int main(int argc, char *argv[])
     //Optional arguments
     QStringList options = cParse.optionNames();
     QString actionToLaunch;
+    QString desktopFile;
     foreach(QString option, options){
         if(option=="action")
             actionToLaunch = cParse.value(option);
+        if(option=="desktop-file-generate")
+            desktopFile = cParse.value(option);
     }
+    int runmode = 0;
+    if(!desktopFile.isEmpty())
+        runmode=1;
 
     //Open document
     QJsonDocument jDoc;
     jDoc = jParse.jsonOpenFile(filename);
-    if(jParse.jsonParse(jDoc,1)!=0)
-        qDebug() << "Something horrible happened! Call the fire department!";
+    if(jParse.jsonParse(jDoc,1)!=0){
+        printf("Something horrible happened! Call the fire department!");
+    }else
+        printf("Parsing process exited happily.");
+    if(jParse.runProcesses(actionToLaunch,desktopFile,runmode)!=0)
+        printf("Shit.");
 
     qDebug()<< "bing";
     jParse.testEnvironment();
@@ -224,11 +237,9 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         if(key.endsWith(".prerun"))
             insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
         if(key.endsWith(".postrun"))
-            insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
+            insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),1);
     }
-
-    int finalSignal = executeProcess(QString());
-    return finalSignal;
+    return 0;
 }
 
 QHash<QString,QVariant> JasonParser::jsonExamineArray(QJsonArray jArray){
@@ -521,7 +532,7 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
             dWMClass = desktopObject.value(key).toString();
         if(key=="desktop.icon")
             dIcon = desktopObject.value(key).toString();
-        if(key=="desktop.action"){
+        if(key.startsWith("desktop.action.")){
             QJsonObject action = desktopObject.value(key).toObject();
             QString aName,aExec,aID,aWD;
             foreach(QString actKey, action.keys()){
@@ -627,7 +638,7 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
                 action = resolveVariable(subsystemElement.value(key).toString());
                 foreach(QString prefix,launchPrefixes)
                     if(prefix.contains(key.split(".")[0]))
-                        launchPrefix=prefix.split("=")[1]+" ";
+                        launchPrefix=prefix.split("=")[1];
             }
             if(key=="selections")
                 selection = subsystemElement.value(key).toHash().value(option.toString()).toJsonObject();
@@ -854,13 +865,17 @@ void JasonParser::addToRuntime(QString role, QVariant input){
 void JasonParser::insertPrerunPostrun(QHash<QString, QVariant> runtable, int mode){
     if(runtable.isEmpty())
         return;
-    int priority = 1;
     foreach(QString i,runtable.keys()){
+        int priority;
         QString role;
         if(mode==0){
             role="sys-prerun";
-        }else
+            priority=1;
+        }
+        if(mode==1){
             role="sys-postrun";
+            priority=0;
+        }
         QString command;
         QString desktopTitle;
         QString workingDir;
@@ -893,6 +908,8 @@ void JasonParser::insertPrerunPostrun(QHash<QString, QVariant> runtable, int mod
         returnHash.insert("priority",priority);
         if(!desktopTitle.isEmpty())
             returnHash.insert("desktop.title",desktopTitle);
+        if(!launchPrefix.isEmpty())
+            returnHash.insert("launch-prefix",launchPrefix);
         if(!workingDir.isEmpty())
             returnHash.insert("workingdir",workingDir);
         addToRuntime(role,returnHash);
@@ -900,24 +917,95 @@ void JasonParser::insertPrerunPostrun(QHash<QString, QVariant> runtable, int mod
     return;
 }
 
-int JasonParser::executeProcess(QString launchId){
-    QString globalWorkingDir;
-    QString mainCommandLine;
+int JasonParser::runProcesses(QString launchId,QString desktopFile,int runmode){
+    /*
+     * desktopFile:
+     *  - Used to generate a .desktop file (yes, odd placement within "executeProcess", but it will do.)
+     *
+     * launchId:
+     *  - Either is empty (thus launching the default program) or filled with an ID. All preruns and postruns are
+     * run as normal before and after, but prefixes and suffixes are not added.
+     *
+     * Runmodes:
+     *  - 0: Launch action or default option
+     *  - 1: Create desktop file
+    */
+    if(launchId.isEmpty())
+        launchId = "default";
+
+    QList<QVariant> sysPrerun;
+    QList<QVariant> sysPostrun;
+    QHash<QString,QVariant> runPrefix;
+    QHash<QString,QVariant> launchables;
+    QHash<QString,QVariant> runSuffix;
+    foreach(QString element, runtimeValues.keys()){
+        if((element=="sys-prerun")&&(!runtimeValues.value(element).toList().isEmpty()))
+            sysPrerun = runtimeValues.value(element).toList();
+        if((element=="sys-postrun")&&(!runtimeValues.value(element).toList().isEmpty()))
+            sysPostrun = runtimeValues.value(element).toList();
+        if((element=="run-prefix")&&(!runtimeValues.value(element).toHash().isEmpty()))
+            runPrefix = runtimeValues.value(element).toHash();
+        if((element=="launchables")&&(!runtimeValues.value(element).toHash().isEmpty()))
+            launchables = runtimeValues.value(element).toHash();
+        if((element=="run-suffix")&&(!runtimeValues.value(element).toHash().isEmpty()))
+            runSuffix = runtimeValues.value(element).toHash();
+    }
+    for(int i=0;i<sysPrerun.count();i++){
+        QHash<QString,QVariant> object = sysPrerun.at(i).toHash();
+        QString program;
+        QString argument;
+        QString workDir;
+        foreach(QString key,object.keys()){
+            if(key=="command")
+                argument=resolveVariable(object.value(key).toString());
+            if(key=="launch-prefix")
+                program=resolveVariable(object.value(key).toString());
+            if(key=="workingdir")
+                workDir=resolveVariable(object.value(key).toString());
+        }
+        executeProcess(argument,program,workDir);
+    }
+    for(int i=0;i<sysPostrun.count();i++){
+        QHash<QString,QVariant> object = sysPostrun.at(i).toHash();
+        QString program;
+        QString argument;
+        QString workDir;
+        foreach(QString key,object.keys()){
+            if(key=="command")
+                argument=resolveVariable(object.value(key).toString());
+            if(key=="launch-prefix")
+                program=resolveVariable(object.value(key).toString());
+            if(key=="workingdir")
+                workDir=resolveVariable(object.value(key).toString());
+        }
+        executeProcess(argument,program,workDir);
+    }
+    foreach(QString key,launchables.keys()){
+        qDebug() << key;
+    }
+
+    return 0;
+}
+
+int JasonParser::executeProcess(QString argument, QString program, QString workDir){
+    qDebug() << "working in:" << workDir << program+" "+argument;
 
 
     QProcess executer;
     executer.setProcessEnvironment(procEnv);
     executer.setProcessChannelMode(QProcess::SeparateChannels);
-    executer.setWorkingDirectory(globalWorkingDir);
-    executer.setProgram("sh");
+    if(!workDir.isEmpty())
+        executer.setWorkingDirectory(workDir);
+    executer.setProgram("sh"); //May want to make this configurable
+
     QStringList arguments;
-    arguments << "-c" << "env";
+    arguments.append("-c");
+    arguments.append(program+" "+argument);
     executer.setArguments(arguments);
     executer.start();
     executer.waitForFinished();
     qDebug() << executer.readAllStandardOutput();
     qDebug() << executer.readAllStandardError();
     qDebug() << "end";
-
     return 0;
 }
