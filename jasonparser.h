@@ -54,14 +54,14 @@ public:
     void insertPrerunPostrun(QHash<QString,QVariant> runtable,int mode); //int mode is used to differentiate between post- and prerun tables, where prerun is 0 and postrun is 1. It's ugly.
 
     //Fucking finally
-    int executeProcess();
+    int executeProcess(QString launchId);
 
     //Hashes/arrays/vectors
     QHash<QString, QString> substitutes;
     QHash<int, QHash<QString,QVariant> > subsystems;
     QHash<QString,QVariant> activeOptions;
     QHash<QString,QVariant> systemTable;
-    QHash<QString,QVector<QVariant> > runtimeValues;
+    QHash<QString,QVariant> runtimeValues;
     QStringList importedFiles;
 
 private:

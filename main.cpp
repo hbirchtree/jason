@@ -58,7 +58,7 @@ void JasonParser::testEnvironment(){
 //    qDebug() << systemTable;
 //    qDebug() << activeOptions;
 //    qDebug() << procEnv.toStringList();
-//    qDebug() << runtimeValues;
+//    qDebug() << runtimeValues.value("launchables");
     foreach(QString var,procEnv.toStringList()){
         if(var.contains("%"))
             qDebug() << "unresolved variable?" << var.split("=")[1];
@@ -183,6 +183,13 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
  * Subsystems will be triggered according to their type and what option is entered.
  *
 */
+    if(runtimeValues.isEmpty()){ //If the table is empty, initialize it with empty QStrings and QStringLists
+        runtimeValues.insert("run-prefix",QList<QVariant>());
+        runtimeValues.insert("run-suffix",QList<QVariant>());
+        runtimeValues.insert("sys-prerun",QList<QVariant>());
+        runtimeValues.insert("sys-postrun",QList<QVariant>());
+        runtimeValues.insert("launchables",QHash<QString,QVariant>());
+    }
     QStringList activeSystems;
     foreach(QString import,importedFiles)
         jsonParse(jsonOpenFile(import),3);
@@ -220,7 +227,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
             insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
     }
 
-    int finalSignal = executeProcess();
+    int finalSignal = executeProcess(QString());
     return finalSignal;
 }
 
@@ -503,21 +510,45 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
  * A desktop action entry will use the appendage of --action [id] to make a distinction between the
  * different entries that may exist.
 */
-//    foreach(QString key, desktopObject.keys()){
-//        if(key=="desktop.displayname")
-//            qDebug() << desktopObject.value(key).toString();
-//        if(key=="desktop.description")
-//            qDebug() << desktopObject.value(key).toString();
-//        if(key=="desktop.wmclass")
-//            qDebug() << desktopObject.value(key).toString();
-//        if(key=="desktop.icon")
-//            qDebug() << desktopObject.value(key).toString();
-//        if(key=="desktop.action"){
-//            QJsonObject action = desktopObject.value(key).toObject();
-//            foreach(QString actKey, action.keys())
-//                qDebug() << actKey << action.value(actKey).toString();
-//        }
-//    }
+    QString dName,dDesc,dWMClass,dIcon;
+    QHash<QString,QVariant> containerHash = runtimeValues.value("launchables").toHash();
+    foreach(QString key, desktopObject.keys()){
+        if(key=="desktop.displayname")
+            dName = desktopObject.value(key).toString();
+        if(key=="desktop.description")
+            dDesc = desktopObject.value(key).toString();
+        if(key=="desktop.wmclass")
+            dWMClass = desktopObject.value(key).toString();
+        if(key=="desktop.icon")
+            dIcon = desktopObject.value(key).toString();
+        if(key=="desktop.action"){
+            QJsonObject action = desktopObject.value(key).toObject();
+            QString aName,aExec,aID,aWD;
+            foreach(QString actKey, action.keys()){
+                if(actKey.endsWith(".exec"))
+                    aExec = action.value(actKey).toString();
+                if(actKey.endsWith(".workdir"))
+                    aWD = action.value(actKey).toString();
+                if(actKey=="action-id")
+                    aID = action.value(actKey).toString();
+                if(actKey=="desktop.displayname")
+                    aName = action.value(actKey).toString();
+            }
+            QHash<QString,QVariant> actionHash;
+            actionHash.insert("command",aExec);
+            actionHash.insert("workingdir",aWD);
+            actionHash.insert("displayname",aExec);
+            containerHash.insert(aID,actionHash);
+        }
+    }
+    QHash<QString,QVariant> desktopHash;
+    desktopHash.insert("displayname",dName);
+    desktopHash.insert("description",dDesc);
+    desktopHash.insert("wmclass",dWMClass);
+    desktopHash.insert("icon",dIcon);
+    runtimeValues.remove("launchables");
+    containerHash.insert("default.desktop",desktopHash);
+    runtimeValues.insert("launchables",containerHash);
     return;
 }
 
@@ -770,7 +801,25 @@ void JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLi
             }
         }
     }
-
+    QString mainExec;
+    QString mainWDir;
+    QString launchPrefix = systemElement.value("launch-prefix").toString();
+    foreach(QString key,activeOptions.keys())
+        if(key.startsWith(configPrefix)){
+            if(key.endsWith(".exec"))
+                mainExec = activeOptions.value(key).toString();
+            if(key.endsWith(".workdir"))
+                mainWDir = activeOptions.value(key).toString();
+        }
+    if(!mainExec.isEmpty()){
+        QHash<QString,QVariant> runHash;
+        runHash.insert("command",mainExec);
+        runHash.insert("workingdir",mainWDir);
+        QHash<QString,QVariant> containerHash = runtimeValues.value("launchables").toHash();
+        runtimeValues.remove("launchables");
+        containerHash.insert("default",runHash);
+        runtimeValues.insert("launchables",containerHash);
+    }
     return;
 }
 
@@ -793,14 +842,8 @@ void JasonParser::addToRuntime(QString role, QVariant input){
      *
      * These conditions apply to all systems regardlessly.
     */
-    if(runtimeValues.isEmpty()){ //If the table is empty, initialize it with empty QStrings and QStringLists
-        runtimeValues.insert("run-prefix",QVector<QVariant>());
-        runtimeValues.insert("run-suffix",QVector<QVariant>());
-        runtimeValues.insert("sys-prerun",QVector<QVariant>());
-        runtimeValues.insert("sys-postrun",QVector<QVariant>());
-    }
     if((role=="run-prefix")||(role=="run-suffix")||(role=="sys-prerun")||(role=="sys-postrun")){
-        QVector<QVariant> roleHashes = runtimeValues.value(role).toList().toVector();
+        QList<QVariant> roleHashes = runtimeValues.value(role).toList();
         runtimeValues.remove(role);
         roleHashes.append(input.toHash());
         runtimeValues.insert(role,roleHashes);
@@ -857,24 +900,19 @@ void JasonParser::insertPrerunPostrun(QHash<QString, QVariant> runtable, int mod
     return;
 }
 
-int JasonParser::executeProcess(){
+int JasonParser::executeProcess(QString launchId){
     QString globalWorkingDir;
     QString mainCommandLine;
-    foreach(QString key,activeOptions.keys()){
-        if(key.endsWith(".workdir"))
-            if(activeOptions.keys().contains(key.split(".")[0]+".exec"))
-                qDebug() << key << resolveVariable(activeOptions.value(key).toString());
-        if(key.endsWith(".exec"))
-            mainCommandLine = activeOptions.value(key).toString();
-    }
-    qDebug() << resolveVariable(mainCommandLine);
+
 
     QProcess executer;
     executer.setProcessEnvironment(procEnv);
     executer.setProcessChannelMode(QProcess::SeparateChannels);
     executer.setWorkingDirectory(globalWorkingDir);
-    executer.setProgram("/usr/bin/env");
-//    executer.setArguments(QStringList(""));
+    executer.setProgram("sh");
+    QStringList arguments;
+    arguments << "-c" << "env";
+    executer.setArguments(arguments);
     executer.start();
     executer.waitForFinished();
     qDebug() << executer.readAllStandardOutput();
