@@ -11,6 +11,22 @@
 			"value": "'Logitech USB-PS/2 Optical Mouse'"
 		}
 	],
+	"systems":
+	[
+		{
+			"type": "launcher",
+			"identifier": "system",
+			"config-prefix": "sys",
+			"environment":
+			[
+				{
+					"type": "variable",
+					"name": "IS_RUN_WITH_JASON",
+					"value": "1"
+				}
+			]
+		}
+	],
 	"subsystems":
 	[
 		{

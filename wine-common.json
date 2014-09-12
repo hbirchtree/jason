@@ -41,7 +41,6 @@
 				}
 			]
 		}
-		
 	],
 	"wine.postrun":
 	[
@@ -81,6 +80,11 @@
 					"type": "config-input",
 					"name": "WINEPREFIX_ID",
 					"input": "wineprefix-id"
+				},
+				{
+					"type": "config-input",
+					"name": "STARTDIR",
+					"input": "workdir"
 				}
 			],
 			"environment":
@@ -119,20 +123,6 @@
 					"type": "variable",
 					"name": "WINEDEBUG",
 					"value": "%WINEDEBUG%"
-				}
-			]
-		},
-		{
-			"type": "launcher",
-			"identifier": "system",
-			"config-prefix": "sys",
-			"launch-prefix": "sh",
-			"environment":
-			[
-				{
-					"type": "variable",
-					"name": "IS_RUN_WITH_JASON",
-					"value": "1"
 				}
 			]
 		}

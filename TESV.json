@@ -31,11 +31,11 @@
 		{
 			"priority": 0,
 			"display.title": "Mounting overlayfs",
-			"sys.exec": "gksudo --description \"mounting overlayfs\" -- mount -t overlayfs -o lowerdir=\"%UNDERLAY%\",upperdir=\"%OVERLAY%\",rw overlayfs \"%STARTDIR%\""
+			"sys.exec": "gksudo --description 'Mounting overlayfs' -- mount -t overlayfs -o lowerdir='%UNDERLAY%',upperdir='%OVERLAY%',rw overlayfs '%STARTDIR%'"
 		},
 		{
 			"display.title": "Patching binary with LBA patch",
-			"wine.exec": "%TOOLS%/wine-lba-patch.exe",
+			"wine.exec": "%TOOLS%/wine-lba-patch.exe TESV.exe",
 			"wine.workdir": "%STEAMAPPS%/Skyrim"
 		}
 	],
@@ -44,7 +44,7 @@
 		{
 			"priority": 1,
 			"display.title": "Unmounting overlayfs",
-			"sys.exec": "gksudo -- umount \"%STEAMAPPS%/Skyrim\""
+			"sys.exec": "gksudo -- umount '%STEAMAPPS%/Skyrim'"
 		}
 	],
 	"desktop.file":
@@ -53,9 +53,16 @@
 		"desktop.displayname": "The Elder Scrolls V: Skyrim",
 		"desktop.description": "EPIC FANTASY REBORN The next chapter in the highly anticipated Elder Scrolls saga arrives from the makers of the 2006 and 2008 Games of the Year, Bethesda Game Studios. Skyrim reimagines and revolutionizes the open-world fantasy epic, bringing to life a complete virtual world open for you to explore any way you choose.",
 		"desktop.wmclass": "TESV.exe",
-		"desktop.action":
+		"desktop.action.launcher":
 		{
 			"action-id": "launcher",
+			"desktop.displayname": "Skyrim launcher",
+			"wine.exec": "SkyrimLauncher.exe",
+			"wine.workdir": "%STEAMAPPS%/Skyrim"
+		},
+		"desktop.action.launcher2":
+		{
+			"action-id": "launcher2",
 			"desktop.displayname": "Skyrim launcher",
 			"wine.exec": "SkyrimLauncher.exe",
 			"wine.workdir": "%STEAMAPPS%/Skyrim"
