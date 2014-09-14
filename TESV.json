@@ -15,6 +15,7 @@
 	"wine.workdir": "%WINEPREFIX%/Skyrim",
 	"wine.version":"1.7.24-csmt",
 	"wine.exec": "skse_loader.exe",
+	"sys.detachable-process": true,
 	"variables":
 	[
 		{

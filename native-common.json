@@ -1,5 +1,10 @@
 {
 	"subsystem.xinput-mouse-profile.post": "desktop",
+	"shell.properties":
+	{
+		"shell": "sh",
+		"command.argument": "-c --"
+	},
 	"variables":
 	[
 		{

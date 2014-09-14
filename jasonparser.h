@@ -45,7 +45,7 @@ public:
     void systemHandle(QHash<QString,QVariant> systemElement);
 
     //Activate options
-    void systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
+    int systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
     void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option,QStringList activeSystems);
     QHash<QString,QVariant> createExecutionQueue(QString launchType);
     void environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems);
@@ -54,8 +54,9 @@ public:
     void insertPrerunPostrun(QHash<QString,QVariant> runtable,int mode); //int mode is used to differentiate between post- and prerun tables, where prerun is 0 and postrun is 1. It's ugly.
 
     //Fucking finally
-    int runProcesses(QString launchId,QString desktopFile,int runmode);
+    int runProcesses(QString launchId);
     int executeProcess(QString argument,QString program,QString workDir);
+    void generateDesktopFile(QString desktopFile);
 
     //Hashes/arrays/vectors
     QHash<QString, QString> substitutes;

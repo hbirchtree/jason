@@ -45,21 +45,23 @@ int main(int argc, char *argv[])
         if(option=="desktop-file-generate")
             desktopFile = cParse.value(option);
     }
-    int runmode = 0;
-    if(!desktopFile.isEmpty())
-        runmode=1;
 
     //Open document
     QJsonDocument jDoc;
     jDoc = jParse.jsonOpenFile(filename);
     if(jParse.jsonParse(jDoc,1)!=0){
-        printf("Something horrible happened! Call the fire department!");
+        printf("Apples is stuck in a tree! We need to call the fire department!\n");
+        return 1;
     }else
-        printf("Parsing process exited happily.");
-    if(jParse.runProcesses(actionToLaunch,desktopFile,runmode)!=0)
-        printf("Shit.");
+        printf("Parsing process exited happily.\n");
 
-    qDebug()<< "bing";
+    if(desktopFile.isEmpty()){
+    if(jParse.runProcesses(actionToLaunch)!=0)
+        printf("Shit.\n");
+    }else{
+        qDebug() << "would generate a .desktop file here.";
+    }
+
     jParse.testEnvironment();
 
     return 0;
@@ -182,6 +184,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         }
         if(key=="launchtype")
             activeOptions.insert(key,instanceValue.toString());
+        if(key=="shell.properties")
+            activeOptions.insert(key,instanceValue.toObject());
     }
     if(level==3)
         return 0;
@@ -217,7 +221,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
                 if(key=="inherit")
                     activeSystems.append(currentSystem.value(key).toString().split(","));
             }
-            systemActivate(currentSystem,activeSystems);
+            if(systemActivate(currentSystem,activeSystems)!=0)
+                return 1;
         }
     }
     resolveVariables();
@@ -534,10 +539,13 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
             dIcon = desktopObject.value(key).toString();
         if(key.startsWith("desktop.action.")){
             QJsonObject action = desktopObject.value(key).toObject();
-            QString aName,aExec,aID,aWD;
+            QString aName,aExec,aID,aWD,aCPrefix,aLPrefix;
             foreach(QString actKey, action.keys()){
-                if(actKey.endsWith(".exec"))
+                if(actKey.endsWith(".exec")){
+                    if(!actKey.split(".")[0].isEmpty())
+                        aCPrefix = actKey.split(".")[0];
                     aExec = action.value(actKey).toString();
+                }
                 if(actKey.endsWith(".workdir"))
                     aWD = action.value(actKey).toString();
                 if(actKey=="action-id")
@@ -545,10 +553,19 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
                 if(actKey=="desktop.displayname")
                     aName = action.value(actKey).toString();
             }
+            if(!aCPrefix.isEmpty()){
+                foreach(QString system,systemTable.keys())
+                    if(systemTable.value(system).toHash().value("config-prefix").toString()==aCPrefix)
+                        if(!systemTable.value(system).toHash().value("launch-prefix").toString().isEmpty())
+                            aLPrefix = systemTable.value(system).toHash().value("launch-prefix").toString();
+            }
             QHash<QString,QVariant> actionHash;
             actionHash.insert("command",aExec);
-            actionHash.insert("workingdir",aWD);
-            actionHash.insert("displayname",aExec);
+            if(!aWD.isEmpty())
+                actionHash.insert("workingdir",aWD);
+            if(!aLPrefix.isEmpty())
+                actionHash.insert("launch-prefix",aLPrefix);
+            actionHash.insert("displayname",aName);
             containerHash.insert(aID,actionHash);
         }
     }
@@ -605,9 +622,6 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
     if(type=="bool")
         if(!option.toBool())//Do not run if boolean value is false
             return;
-//    foreach(QString key,subsystemElement.keys())
-//        if(key=="environment")
-//            environmentActivate(subsystemElement.value(key).toList().at(0).toHash(),activeSystems);
 
     /* Handling for each type of subsystem
      *  - select - the option (in singular) chooses which object in a list is activated. These may
@@ -761,7 +775,7 @@ void JasonParser::environmentActivate(QHash<QString,QVariant> environmentHash,QS
 }
 
 
-void JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems){
+int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems){
     /*activeSystems contain the identifiers for the systems currently active, including the
      * system itself as well as any it may inherit. Inheritance allows the system to access
      * elements that the other system uses, such as .postrun and .prerun, but will not inherit
@@ -814,24 +828,32 @@ void JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLi
     }
     QString mainExec;
     QString mainWDir;
-    QString launchPrefix = systemElement.value("launch-prefix").toString();
+    QString launchPrefix = systemElement.value("launch-prefix").toString(); //The launchprefix is determined by the launchtype of the main execution statement. If this does not match the main system, puke an error and refuse to continue, because it's not good practice to ditch the system that is chosen.
     foreach(QString key,activeOptions.keys())
         if(key.startsWith(configPrefix)){
-            if(key.endsWith(".exec"))
+            if(key.endsWith(".exec")){
                 mainExec = activeOptions.value(key).toString();
+            }
             if(key.endsWith(".workdir"))
                 mainWDir = activeOptions.value(key).toString();
         }
     if(!mainExec.isEmpty()){
+        if(mainExec.isEmpty()){
+            printf("WARN: There is no main execution value. Just a heads up.\n");
+        }
         QHash<QString,QVariant> runHash;
         runHash.insert("command",mainExec);
         runHash.insert("workingdir",mainWDir);
+        runHash.insert("launch-prefix",launchPrefix);
         QHash<QString,QVariant> containerHash = runtimeValues.value("launchables").toHash();
         runtimeValues.remove("launchables");
         containerHash.insert("default",runHash);
         runtimeValues.insert("launchables",containerHash);
+    }else{
+        printf("ERROR: No primary command line found. Is there a mismatch between the launcher type and .exec value?\n");
+        return 1;
     }
-    return;
+    return 0;
 }
 
 
@@ -917,10 +939,8 @@ void JasonParser::insertPrerunPostrun(QHash<QString, QVariant> runtable, int mod
     return;
 }
 
-int JasonParser::runProcesses(QString launchId,QString desktopFile,int runmode){
+int JasonParser::runProcesses(QString launchId){
     /*
-     * desktopFile:
-     *  - Used to generate a .desktop file (yes, odd placement within "executeProcess", but it will do.)
      *
      * launchId:
      *  - Either is empty (thus launching the default program) or filled with an ID. All preruns and postruns are
@@ -928,7 +948,6 @@ int JasonParser::runProcesses(QString launchId,QString desktopFile,int runmode){
      *
      * Runmodes:
      *  - 0: Launch action or default option
-     *  - 1: Create desktop file
     */
     if(launchId.isEmpty())
         launchId = "default";
@@ -963,13 +982,29 @@ int JasonParser::runProcesses(QString launchId,QString desktopFile,int runmode){
             if(key=="workingdir")
                 workDir=resolveVariable(object.value(key).toString());
         }
-        executeProcess(argument,program,workDir);
+//        executeProcess(argument,program,workDir);
     }
+
+    //This is where the action happens.
+    foreach(QString launchable,launchables.keys())
+        if(launchable==launchId){
+            QString argument,program,workDir;
+            QHash<QString,QVariant> launchObject = launchables.value(launchable).toHash();
+            foreach(QString key,launchObject.keys()){
+                if(key=="command")
+                    argument=resolveVariable(object.value(key).toString());
+                if(key=="launch-prefix")
+                    program=resolveVariable(object.value(key).toString());
+                if(key=="workingdir")
+                    workDir=resolveVariable(object.value(key).toString());
+            }
+            if((!argument.isEmpty())&&(!program.isEmpty()))
+                executeProcess(argument,program,workDir);
+        }
+
     for(int i=0;i<sysPostrun.count();i++){
         QHash<QString,QVariant> object = sysPostrun.at(i).toHash();
-        QString program;
-        QString argument;
-        QString workDir;
+        QString program,argument,workDir;
         foreach(QString key,object.keys()){
             if(key=="command")
                 argument=resolveVariable(object.value(key).toString());
@@ -978,34 +1013,63 @@ int JasonParser::runProcesses(QString launchId,QString desktopFile,int runmode){
             if(key=="workingdir")
                 workDir=resolveVariable(object.value(key).toString());
         }
-        executeProcess(argument,program,workDir);
-    }
-    foreach(QString key,launchables.keys()){
-        qDebug() << key;
+//        executeProcess(argument,program,workDir);
     }
 
     return 0;
 }
 
 int JasonParser::executeProcess(QString argument, QString program, QString workDir){
-    qDebug() << "working in:" << workDir << program+" "+argument;
+    /*
+     * program - Prefixed to argument, specifically it could be 'wine' or another frontend program such as
+     * 'mupen64plus'. It is not supposed to run shells.
+     * argument - The command line, only in this context it is indeed an argument.
+     * workDir - The wished working directory for the operation.
+    */
 
+    /*
+     * TODO:
+     *  - Insert prefix and suffix into the command line by way of prepending and appending.
+     *  - Show some GUI magic run by a separate thread as a user-friendly indicator for progress, may also
+     *      want to show a dialog button for detaching processes so that postrun doesn't run prematurely.
+     *  - Implement programming to pick up aforementioned option
+     *  - Add the desktop file generation function and decide how the Exec option should look
+     *  - Add even more pretty GUIs
+     *
+    */
+
+    QString shell = "sh"; //Just defaults, in case nothing is specified.
+    QString shellArg = "-c --"; //We don't want the shell to pick up more arguments.
+    QJsonObject shellOptions = activeOptions.value("shell.properties").toJsonObject();
+    foreach(QString key,shellOptions.keys()){
+        if(key=="shell")
+            shell=shellOptions.value(key).toString();
+        if(key=="command.argument")
+            shellArg=shellOptions.value(key).toString();
+    }
+    if(shell.isEmpty())
+        return 1;
 
     QProcess executer;
+    QStringList arguments;
     executer.setProcessEnvironment(procEnv);
     executer.setProcessChannelMode(QProcess::SeparateChannels);
     if(!workDir.isEmpty())
-        executer.setWorkingDirectory(workDir);
-    executer.setProgram("sh"); //May want to make this configurable
+        executer.setWorkingDirectory(workDir); //Set working directory
+    executer.setProgram(shell);
+    arguments.append(shellArg);
 
-    QStringList arguments;
-    arguments.append("-c");
-    arguments.append(program+" "+argument);
+    arguments.append(program+" "+argument); //"argument" is the command line we want to run. "program" can potentially be the wine binary or something else.
     executer.setArguments(arguments);
     executer.start();
     executer.waitForFinished();
-    qDebug() << executer.readAllStandardOutput();
-    qDebug() << executer.readAllStandardError();
-    qDebug() << "end";
+    QByteArray stdout;
+    QByteArray stderr;
+    if(!stdout.isEmpty())
+        qDebug() << stdout;
+    if(!stderr.isEmpty()){
+        qDebug() << stderr;
+        return 1;
+    }
     return 0;
 }

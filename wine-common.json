@@ -84,7 +84,7 @@
 				{
 					"type": "config-input",
 					"name": "STARTDIR",
-					"input": "workdir"
+					"input": "workingdir"
 				}
 			],
 			"environment":
