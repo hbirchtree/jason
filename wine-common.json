@@ -84,7 +84,7 @@
 				{
 					"type": "config-input",
 					"name": "STARTDIR",
-					"input": "workingdir"
+					"input": "workdir"
 				}
 			],
 			"environment":
@@ -92,12 +92,22 @@
 				{
 					"type": "variable",
 					"name": "PATH",
-					"value": "%PATH%:%WINEBUILDS%/%WINEVERSION%/bin"
+					"value": "%WINEBUILDS%/%WINEVERSION%/bin:%PATH%"
 				},
 				{
 					"type": "variable",
 					"name": "LD_LIBRARY_PATH",
 					"value": "%WINEBUILDS%/%WINEVERSION%/lib:%WINEBUILDS%/%WINEVERSION%/lib64"
+				},
+				{
+					"type": "variable",
+					"name": "XDG_DATA_DIRS",
+					"value": "%WINEBUILDS%/%WINEVERSION%/share:%XDG_DATA_DIRS%"
+				},
+				{
+					"type": "variable",
+					"name": "WINEPREFIX",
+					"value": "%WINEPREFIX%"
 				},
 				{
 					"type": "variable",
@@ -108,16 +118,6 @@
 					"type": "variable",
 					"name": "WINEARCH",
 					"value": "win32"
-				},
-				{
-					"type": "variable",
-					"name": "XDG_DATA_DIRS",
-					"value": "%XDG_DATA_DIRS%:%WINEBUILDS%/%WINEVERSION%/share"
-				},
-				{
-					"type": "variable",
-					"name": "WINEPREFIX",
-					"value": "%WINEPREFIX%"
 				},
 				{
 					"type": "variable",

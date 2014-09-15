@@ -12,10 +12,10 @@
 	"subsystem.xinput-mouse-profile.pre": "noaccel",
 	"subsystem.nvidia-optimizations": "glthread,vblank",
 	"subsystem.gametimer": "Skyrim",
-	"wine.workdir": "%WINEPREFIX%/Skyrim",
+	"wine.workdir": "%STEAMAPPS%/Skyrim",
 	"wine.version":"1.7.24-csmt",
 	"wine.exec": "skse_loader.exe",
-	"sys.detachable-process": true,
+	"global.detachable-process": true,
 	"variables":
 	[
 		{
@@ -59,14 +59,21 @@
 			"action-id": "launcher",
 			"desktop.displayname": "Skyrim launcher",
 			"wine.exec": "SkyrimLauncher.exe",
-			"wine.workdir": "%STEAMAPPS%/Skyrim"
+			"wine.workdir": "%STARTDIR%"
 		},
 		"desktop.action.launcher2":
 		{
 			"action-id": "launcher2",
 			"desktop.displayname": "Skyrim launcher",
 			"wine.exec": "SkyrimLauncher.exe",
-			"wine.workdir": "%STEAMAPPS%/Skyrim"
+			"wine.workdir": "%STARTDIR%"
+		},
+		"desktop.action.terminal":
+		{
+			"action-id": "terminal",
+			"desktop.displayname": "Terminal",
+			"sys.exec": "xterm",
+			"wine.workdir": "%STARTDIR%"
 		}
 	}
 }

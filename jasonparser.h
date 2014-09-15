@@ -20,6 +20,8 @@
 
 class JasonParser : public QObject
 {
+    Q_OBJECT
+
 public:
     int jsonParse(QJsonDocument jDoc,int level);
 
@@ -55,7 +57,7 @@ public:
 
     //Fucking finally
     int runProcesses(QString launchId);
-    int executeProcess(QString argument,QString program,QString workDir);
+    void executeProcess(QString argument,QString program,QString workDir);
     void generateDesktopFile(QString desktopFile);
 
     //Hashes/arrays/vectors
@@ -69,7 +71,9 @@ public:
 private:
 
 public slots:
-
+    void processOutputError(QProcess::ProcessError processError);
+    void processOutputProcess(int exitCode,QProcess::ExitStatus exitStatus);
+    void processStarted();
 };
 
 #endif // JASONPARSER_H

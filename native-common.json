@@ -3,7 +3,7 @@
 	"shell.properties":
 	{
 		"shell": "sh",
-		"command.argument": "-c --"
+		"command.argument": "-c"
 	},
 	"variables":
 	[
