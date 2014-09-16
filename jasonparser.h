@@ -1,7 +1,7 @@
 #ifndef JASONPARSER_H
 #define JASONPARSER_H
 
-#include <QPointer>
+#include "jasongraphical.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

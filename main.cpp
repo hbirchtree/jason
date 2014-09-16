@@ -1,11 +1,12 @@
 #include "jasonparser.h"
 #include <QCoreApplication>
+#include <QApplication>
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-    QCoreApplication::setApplicationName("Jason");
-    QCoreApplication::setApplicationVersion("0.2");
+    QApplication a(argc, argv);
+    QApplication::setApplicationName("Jason");
+    QApplication::setApplicationVersion("0.2");
 
     JasonParser jParse;
 
@@ -1114,7 +1115,10 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     connect(&executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processOutputProcess(int,QProcess::ExitStatus)));
     connect(&executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
     connect(&executer,SIGNAL(started()),SLOT(processStarted()));
-    executer.start();
+    JasonGraphical gui;
+
+    gui.displayLaunchProgress("TEST");
+//    executer.start();
     executer.waitForFinished();
     qDebug() << executer.readAllStandardOutput();
     qDebug() << executer.readAllStandardError();
