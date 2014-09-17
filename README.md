@@ -2,8 +2,12 @@ jason
 =====
 
 A quite advanced launcher using JSON to store information on how to start the program. It is the opposite of KISS.
-It is written using Qt and its QJson libraries along with QProcess to actually launch the program(s). Though it is aimed for Linux, it may work a little bit on Mac OS X and would most likely be equal to double-clicking a .exe file when run under Windows, although it now only parses and prints information found in the files.
+It is written using Qt and its QJson libraries along with QProcess to actually launch the program(s). Though it is aimed for Linux, it may work a little bit on Mac OS X and would most likely be equal to double-clicking a .exe file when run under Windows.
 
 Planned features:
- - Lots of configurability, will definitely overlap with functionality found in shellscript. You should use shellscript instead of this. Really.
- - Some GUI features like showing messages and etc, perhaps interacting with Jason through it. No GUI will be made to create Jason-compatible files, although I might do it if I find it manageable. (So far it is not.)
+ - GUI features such as an indefinite progress bar that will display the current process going on and possibly a prettier interface for error messages. (As they are currently printed with printf() to the terminal.)
+
+Finished features:
+ - A decent enough structure for JSON, still needs *some* more features as I have been writing the parser to cope with the example files which do not bring up every possible scenario, but the ground work is there.
+ - Tons of configurability for launching. Really needs a manual on how it works, but until then I (the developer) would say it works decently for a wide enough amount of features, and it is pretty fast even though there are some bad programming choices inside it. (Hash tables. Too many of them.)
+ - Some ground-work for desktop actions, which already are parsed fully and launchable, but it needs a function that prints a .desktop file containing it all.
