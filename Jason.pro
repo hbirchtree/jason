@@ -13,7 +13,8 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    jasongraphical.cpp
+    jasongraphical.cpp \
+    jasonparser.cpp
 
 HEADERS  += jasonparser.h \
     jasongraphical.h

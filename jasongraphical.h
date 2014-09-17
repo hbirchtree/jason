@@ -18,15 +18,18 @@ class JasonGraphical : public QWidget
 public:
     explicit JasonGraphical(QWidget *parent = 0);
 
-    void displayLaunchProgress(QString currentText);
     void waitForQuit(QString waitTitle);
+    void startParse(QString startDocument, QString actionId, QString desktopFile);
 
 private:
     QMessageBox *messageBox;
+    QProgressDialog *progressWindow;
+    QThread *workerThread;
 signals:
 
 
 public slots:
+    void updateLaunchProgress(QString currentText);
 };
 
 #endif // JASONGRAPHICAL_H

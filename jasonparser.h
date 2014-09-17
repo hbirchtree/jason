@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <QString>
 #include <QStringList>
-#include <QCommandLineParser>
-#include <QCommandLineOption>
 
 #include <QProcess>
 #include <QProcessEnvironment>
@@ -21,12 +19,27 @@
 class JasonParser : public QObject
 {
     Q_OBJECT
-
 public:
-    int jsonParse(QJsonDocument jDoc,int level);
+    JasonParser();
+    ~JasonParser();
 
     //General
     void testEnvironment();
+    void setStartOpts(QString startDocument, QString actionId, QString desktopFile);
+
+public slots:
+    void processOutputError(QProcess::ProcessError processError);
+    void processOutputProcess(int exitCode,QProcess::ExitStatus exitStatus);
+    void processStarted();
+    void startParse();
+
+signals:
+    void finishedProcessing();
+
+private:
+    //General
+    int jsonParse(QJsonDocument jDoc,int level);
+    QHash<QString, QString> startOpts;
 
     //JSON
     QJsonDocument jsonOpenFile(QString filename);
@@ -68,12 +81,6 @@ public:
     QHash<QString,QVariant> runtimeValues;
     QStringList importedFiles;
 
-private:
-
-public slots:
-    void processOutputError(QProcess::ProcessError processError);
-    void processOutputProcess(int exitCode,QProcess::ExitStatus exitStatus);
-    void processStarted();
 };
 
 #endif // JASONPARSER_H
