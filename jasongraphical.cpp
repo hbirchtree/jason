@@ -18,12 +18,27 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
     workerThread->start();
-    QMessageBox *messageBox = new QMessageBox;
-    messageBox->information(this,"Test","currentText");
+    showProgressWindow();
+}
+
+void JasonGraphical::showProgressWindow(){
+    QProgressDialog *progressWindow = new QProgressDialog(this);
+    QProgressBar *infiniteBar = new QProgressBar(this);
+    QLabel *statusText = new QLabel(this);
+    statusText->setText("Loading JSON file");
+    infiniteBar->setMaximum(0);
+    infiniteBar->setMinimum(0);
+    progressWindow->setBar(infiniteBar);
+    progressWindow->setLabel(statusText);
+    progressWindow->exec();
+}
+
+void JasonGraphical::showMessage(int status, QString message){
+    qDebug() << status << message;
 }
 
 void JasonGraphical::updateLaunchProgress(QString currentText){
-//    QMessageBox *messageBox = new QMessageBox;
-//    messageBox->information(this,"Test",currentText);
+    QLabel *statusText;
+//    statusText->setText(currentText);
     qDebug() << currentText;
 }

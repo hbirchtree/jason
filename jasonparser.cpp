@@ -28,20 +28,21 @@ void JasonParser::testEnvironment(){
 }
 
 void JasonParser::startParse(){
+    JasonGraphical gui;
     qDebug() << "launched";
     QString startDocument,actionId,desktopFile;
     startDocument=startOpts.value("start-document");
     actionId=startOpts.value("action-id");
     desktopFile=startOpts.value("desktop-file");
     if(jsonParse(jsonOpenFile(startDocument),1)!=0){
-        printf("Apples is stuck in a tree! We need to call the fire department!\n");
+        gui.showMessage(2,"Apples is stuck in a tree! We need to call the fire department!\n");
         return;
     }else
-        printf("Parsing process exited happily.\n");
+        gui.showMessage(0,"Parsing process exited happily.\n");
 
     if(desktopFile.isEmpty()){
         if(runProcesses(actionId)!=0)
-            printf("Shit.\n");
+            gui.showMessage(0,"Shit.\n");
     }else{
         qDebug() << "would generate a .desktop file here.";
     }
@@ -60,23 +61,24 @@ void JasonParser::setStartOpts(QString startDocument, QString actionId, QString 
 }
 
 QJsonDocument JasonParser::jsonOpenFile(QString filename){
+    JasonGraphical gui;
     QFile jDocFile;
     jDocFile.setFileName(filename);
     if (!jDocFile.exists()) {
-        printf("ERROR: jDocFile::File not found\n");
+        gui.showMessage(0,"ERROR: jDocFile::File not found\n");
         return QJsonDocument();
     }
 
     if (!jDocFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
-        printf("ERROR: jDocFile::Failed to open\n");
+        gui.showMessage(2,"ERROR: jDocFile::Failed to open\n");
         return QJsonDocument();
     }
     QJsonParseError initError;
     QJsonDocument jDoc = QJsonDocument::fromJson(jDocFile.readAll(),&initError);
     if (initError.error != 0)
-        printf("ERROR: jDoc: %s\n",qPrintable(initError.errorString()));
+        gui.showMessage(2,"ERROR: jDoc: "+initError.errorString()+"\n");
     if (jDoc.isNull() || jDoc.isEmpty()) {
-        printf("ERROR: jDoc::IsNull or IsEmpty\n");
+        gui.showMessage(2,"ERROR: jDoc::IsNull or IsEmpty\n");
         return QJsonDocument();
     }
     return jDoc;
@@ -814,9 +816,10 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
             if(key=="global.detachable-process")
                 detachStart = activeOptions.value(key).toBool();
         }
+    JasonGraphical gui;
     if(!mainExec.isEmpty()){
         if(mainExec.isEmpty()){
-            printf("WARN: There is no main execution value. Just a heads up.\n");
+            gui.showMessage(1,"WARN: There is no main execution value. Just a heads up.\n");
         }
         QHash<QString,QVariant> runHash;
         runHash.insert("command",mainExec);
@@ -828,7 +831,7 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
         containerHash.insert("default",runHash);
         runtimeValues.insert("launchables",containerHash);
     }else{
-        printf("ERROR: No primary command line found. Is there a mismatch between the launcher type and .exec value?\n");
+        gui.showMessage(2,"ERROR: No primary command line found. Is there a mismatch between the launcher type and .exec value?\n");
         return 1;
     }
     return 0;
@@ -958,7 +961,6 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            qDebug() << name << argument << program;
             executeProcess(argument,program,workDir);
         }
     }
@@ -976,7 +978,6 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            qDebug() << name << argument << program;
             executeProcess(argument,program,workDir);
         }
     }
@@ -987,7 +988,6 @@ int JasonParser::runProcesses(QString launchId){
             QString argument,program,workDir;
             QHash<QString,QVariant> launchObject = launchables.value(launchable).toHash();
             foreach(QString key,launchObject.keys()){
-                qDebug() << key;
                 if(key=="command")
                     argument=resolveVariable(launchObject.value(key).toString());
                 if(key=="launch-prefix")
@@ -1013,7 +1013,6 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            qDebug() << name << argument << program;
             executeProcess(argument,program,workDir);
         }
     }
@@ -1031,7 +1030,6 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            qDebug() << name << argument << program;
             executeProcess(argument,program,workDir);
         }
     }
@@ -1096,10 +1094,11 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
 }
 
 void JasonParser::processOutputProcess(int exitCode, QProcess::ExitStatus exitStatus){
+    JasonGraphical gui;
     if(exitCode==0){
-        printf("Process exited successfully.\n");
+        gui.showMessage(0,"Process exited successfully.\n");
     }else
-        printf("Process exited with status %s.\n",qPrintable(QString::number(exitCode)));
+        gui.showMessage(2,"Process exited with status "+QString::number(exitCode)+".\n");
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){

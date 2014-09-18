@@ -20,10 +20,14 @@ public:
 
     void waitForQuit(QString waitTitle);
     void startParse(QString startDocument, QString actionId, QString desktopFile);
+    void showProgressWindow();
+    void showMessage(int status,QString message);
 
 private:
-    QMessageBox *messageBox;
     QProgressDialog *progressWindow;
+    QProgressBar *infiniteBar;
+    QMessageBox *messageBox;
+    QLabel *statusText;
     QThread *workerThread;
 signals:
 
