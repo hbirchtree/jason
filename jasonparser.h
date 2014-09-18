@@ -28,13 +28,31 @@ public:
     void setStartOpts(QString startDocument, QString actionId, QString desktopFile);
 
 public slots:
-    void processOutputError(QProcess::ProcessError processError);
-    void processOutputProcess(int exitCode,QProcess::ExitStatus exitStatus);
     void processStarted();
     void startParse();
+    void detachedMainProcessClosed();
+
+private slots:
+    void processOutputError(QProcess::ProcessError processError);
+    void processFinished(int exitCode,QProcess::ExitStatus exitStatus);
+    void doPrerun();
+    void doPostrun();
 
 signals:
+
+    //Related to the general look and workings
     void finishedProcessing();
+    void updateProgressText(QString);
+    void updateProgressTitle(QString);
+    void broadcastMessage(int,QString);
+    void toggleProgressVisible(bool);
+    void displayDetachedMessage(QString);
+
+    //Related to processes
+    void mainProcessStart();
+    void mainProcessEnd();
+    void processFailed(QProcess::ProcessError);
+    void processReturnOutput();
 
 private:
     //General
@@ -70,7 +88,7 @@ private:
 
     //Fucking finally
     int runProcesses(QString launchId);
-    void executeProcess(QString argument,QString program,QString workDir, QString title);
+    void executeProcess(QString argument,QString program,QString workDir, QString title, QString runprefix, QString runsuffix);
     void generateDesktopFile(QString desktopFile);
 
     //Hashes/arrays/vectors

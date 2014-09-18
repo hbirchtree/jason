@@ -10,6 +10,17 @@ JasonGraphical::JasonGraphical(QWidget *parent) :
 }
 
 void JasonGraphical::startParse(QString startDocument, QString actionId, QString desktopFile){
+    QProgressDialog *progressWindow = new QProgressDialog(this);
+    QPushButton *closeProgressWindowBtn = new QPushButton(this);
+    closeProgressWindowBtn->setText(tr("Close"));
+    closeProgressWindowBtn->setDisabled(true);
+    progressWindow->setCancelButton(closeProgressWindowBtn);
+//    progressWindow->setCancelButtonText(tr("Close"));
+    progressWindow->setMinimum(0);
+    progressWindow->setMaximum(0);
+    progressWindow->setFixedHeight(70);
+    progressWindow->setFixedWidth(300);
+
     //Open document
     JasonParser jParse;
     QThread *workerThread = new QThread;
@@ -17,27 +28,38 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     jParse.setStartOpts(startDocument,actionId,desktopFile);
     connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
+    connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
+    connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
+    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
+    connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));
+//    connect(&jParse,SIGNAL(updateProgressText(QString)),SLOT(setProgressText(QString)));
+//    connect(&jParse,SIGNAL(updateProgressTitle(QString)),SLOT(setProgressTitle(QString)));
+    connect(&jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
+    connect(&jParse,SIGNAL(displayDetachedMessage(QString)),SLOT(detachedMessage(QString)));
+    connect(this,SIGNAL(detachedHasClosed()),&jParse,SLOT(detachedMainProcessClosed()));
     workerThread->start();
-    showProgressWindow();
-}
-
-void JasonGraphical::showProgressWindow(){
-    QProgressDialog *progressWindow = new QProgressDialog(this);
-    QProgressBar *infiniteBar = new QProgressBar(this);
-    QLabel *statusText = new QLabel(this);
-    statusText->setText("Placeholder text");
-    infiniteBar->setMaximum(0);
-    infiniteBar->setMinimum(0);
-    progressWindow->setBar(infiniteBar);
-    progressWindow->setLabel(statusText);
-
-    connect(this,SIGNAL(updateLaunchProgress(QString)),statusText,SLOT(setText(QString)));
-    connect(this,SIGNAL(closeWindow()),progressWindow,SLOT(close()));
+//    showProgressWindow();
 
     progressWindow->exec();
 }
 
 void JasonGraphical::showMessage(int status, QString message){
-    qDebug() << status << message;
+    QMessageBox *messageBox = new QMessageBox;
+    return;
+    if(status==0)
+        messageBox->information(this,"Jason information",message);
+    if(status==1)
+        messageBox->warning(this,"Jason warning",message);
+    if(status==2)
+        messageBox->warning(this,"Jason error",message);
 }
 
+void JasonGraphical::detachedMessage(QString title){
+    qDebug() << "detached program";
+    QMessageBox detachedProgramNotify;
+    QString windowTitle = "Jason - Detached process";
+    QString text = title+" is currently detached. Close this window to notify Jason when it has been closed properly.";
+    detachedProgramNotify.information(this,windowTitle,text,tr("It is closed"));
+    qDebug() << "calling postrun";
+    emit detachedHasClosed();
+}
