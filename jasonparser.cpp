@@ -28,6 +28,7 @@ void JasonParser::testEnvironment(){
 }
 
 void JasonParser::startParse(){
+    qDebug() << "launched";
     QString startDocument,actionId,desktopFile;
     startDocument=startOpts.value("start-document");
     actionId=startOpts.value("action-id");
@@ -44,6 +45,7 @@ void JasonParser::startParse(){
     }else{
         qDebug() << "would generate a .desktop file here.";
     }
+    qDebug() << "beep";
     emit finishedProcessing();
 }
 

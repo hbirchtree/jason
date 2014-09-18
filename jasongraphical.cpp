@@ -18,11 +18,12 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
     workerThread->start();
-//    jParse.startParse();
-    qDebug() << "test";
+    QMessageBox *messageBox = new QMessageBox;
+    messageBox->information(this,"Test","currentText");
 }
 
 void JasonGraphical::updateLaunchProgress(QString currentText){
-    QMessageBox *messageBox = new QMessageBox;
-    messageBox->information(this,"Test",currentText);
+//    QMessageBox *messageBox = new QMessageBox;
+//    messageBox->information(this,"Test",currentText);
+    qDebug() << currentText;
 }
