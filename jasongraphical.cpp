@@ -25,11 +25,15 @@ void JasonGraphical::showProgressWindow(){
     QProgressDialog *progressWindow = new QProgressDialog(this);
     QProgressBar *infiniteBar = new QProgressBar(this);
     QLabel *statusText = new QLabel(this);
-    statusText->setText("Loading JSON file");
+    statusText->setText("Placeholder text");
     infiniteBar->setMaximum(0);
     infiniteBar->setMinimum(0);
     progressWindow->setBar(infiniteBar);
     progressWindow->setLabel(statusText);
+
+    connect(this,SIGNAL(updateLaunchProgress(QString)),statusText,SLOT(setText(QString)));
+    connect(this,SIGNAL(closeWindow()),progressWindow,SLOT(close()));
+
     progressWindow->exec();
 }
 
@@ -37,8 +41,3 @@ void JasonGraphical::showMessage(int status, QString message){
     qDebug() << status << message;
 }
 
-void JasonGraphical::updateLaunchProgress(QString currentText){
-    QLabel *statusText;
-//    statusText->setText(currentText);
-    qDebug() << currentText;
-}

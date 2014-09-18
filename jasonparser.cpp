@@ -29,6 +29,7 @@ void JasonParser::testEnvironment(){
 
 void JasonParser::startParse(){
     JasonGraphical gui;
+    gui.updateLaunchProgress("test");
     qDebug() << "launched";
     QString startDocument,actionId,desktopFile;
     startDocument=startOpts.value("start-document");
@@ -961,7 +962,7 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            executeProcess(argument,program,workDir);
+            executeProcess(argument,program,workDir,name);
         }
     }
     for(int i=0;i<sysPrerun.count();i++){
@@ -978,14 +979,14 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            executeProcess(argument,program,workDir);
+            executeProcess(argument,program,workDir,name);
         }
     }
 
     //This is where the action happens.
     foreach(QString launchable,launchables.keys())
         if(launchable==launchId){
-            QString argument,program,workDir;
+            QString argument,program,workDir,name;
             QHash<QString,QVariant> launchObject = launchables.value(launchable).toHash();
             foreach(QString key,launchObject.keys()){
                 if(key=="command")
@@ -994,9 +995,11 @@ int JasonParser::runProcesses(QString launchId){
                     program=resolveVariable(launchObject.value(key).toString());
                 if(key=="workingdir")
                     workDir=resolveVariable(launchObject.value(key).toString());
+                if(key=="desktop.title")
+                    name=resolveVariable(launchObject.value(key).toString());
             }
             if(!argument.isEmpty())
-                executeProcess(argument,program,workDir);
+                executeProcess(argument,program,workDir,name);
         }
 
     for(int i=0;i<sysPostrun.count();i++){
@@ -1013,7 +1016,7 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            executeProcess(argument,program,workDir);
+            executeProcess(argument,program,workDir,name);
         }
     }
     for(int i=0;i<sysPostrun.count();i++){
@@ -1030,14 +1033,14 @@ int JasonParser::runProcesses(QString launchId){
                 if(key=="desktop.title")
                     name=resolveVariable(object.value(key).toString());
             }
-            executeProcess(argument,program,workDir);
+            executeProcess(argument,program,workDir,name);
         }
     }
 
     return 0;
 }
 
-void JasonParser::executeProcess(QString argument, QString program, QString workDir){
+void JasonParser::executeProcess(QString argument, QString program, QString workDir, QString title){
     /*
      * program - Prefixed to argument, specifically it could be 'wine' or another frontend program such as
      * 'mupen64plus'. It is not supposed to run shells.
@@ -1086,11 +1089,13 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     connect(&executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
     connect(&executer,SIGNAL(started()),SLOT(processStarted()));
     JasonGraphical test;
-    test.updateLaunchProgress("Launching");
+    test.updateLaunchProgress(title);
 //    executer.start();
     executer.waitForFinished();
-    qDebug() << executer.readAllStandardOutput();
-    qDebug() << executer.readAllStandardError();
+//    if(!executer.readAllStandardOutput().isEmpty())
+//        qDebug() << executer.readAllStandardOutput();
+//    if(!executer.readAllStandardError().isEmpty())
+//        qDebug() << executer.readAllStandardError();
 }
 
 void JasonParser::processOutputProcess(int exitCode, QProcess::ExitStatus exitStatus){

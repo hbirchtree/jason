@@ -70,7 +70,7 @@ private:
 
     //Fucking finally
     int runProcesses(QString launchId);
-    void executeProcess(QString argument,QString program,QString workDir);
+    void executeProcess(QString argument,QString program,QString workDir, QString title);
     void generateDesktopFile(QString desktopFile);
 
     //Hashes/arrays/vectors
