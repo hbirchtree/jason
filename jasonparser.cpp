@@ -28,19 +28,19 @@ void JasonParser::testEnvironment(){
 }
 
 void JasonParser::startParse(){
-    updateProgressText("Starting to parse JSON document");
+    updateProgressText(tr("Starting to parse JSON document"));
     QString startDocument,actionId,desktopFile;
     startDocument=startOpts.value("start-document");
     actionId=startOpts.value("action-id");
     desktopFile=startOpts.value("desktop-file");
     if(jsonParse(jsonOpenFile(startDocument),1)!=0){
-        broadcastMessage(2,"Apples is stuck in a tree! We need to call the fire department!\n");
+        broadcastMessage(2,tr("Apples is stuck in a tree! We need to call the fire department!\n"));
         return;
     }
 
     if(desktopFile.isEmpty()){
         if(runProcesses(actionId)!=0)
-            broadcastMessage(2,"Shit.\n");
+            broadcastMessage(2,tr("Shit.\n"));
     }else{
         qDebug() << "would generate a .desktop file here.";
     }
@@ -819,7 +819,7 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
         }
     if(!mainExec.isEmpty()){
         if(mainExec.isEmpty()){
-            broadcastMessage(1,"WARN: There is no main execution value. Just a heads up.\n");
+            broadcastMessage(1,tr("WARN: There is no main execution value. Just a heads up.\n"));
         }
         QHash<QString,QVariant> runHash;
         runHash.insert("command",mainExec);
@@ -831,7 +831,7 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
         containerHash.insert("default",runHash);
         runtimeValues.insert("launchables",containerHash);
     }else{
-        broadcastMessage(2,"ERROR: No primary command line found. Is there a mismatch between the launcher type and .exec value?\n");
+        broadcastMessage(2,tr("ERROR: No primary command line found. Is there a mismatch between the launcher type and .exec value?\n"));
         return 1;
     }
     return 0;
@@ -928,29 +928,36 @@ int JasonParser::runProcesses(QString launchId){
     if(launchId.isEmpty())
         launchId = "default";
 
-    QHash<QString,QVariant> runPrefix;
+    QList<QVariant> runPrefix;
+    QList<QVariant> runSuffix;
     QHash<QString,QVariant> launchables;
-    QHash<QString,QVariant> runSuffix;
     foreach(QString element, runtimeValues.keys()){
-        if((element=="run-prefix")&&(!runtimeValues.value(element).toHash().isEmpty()))
-            runPrefix = runtimeValues.value(element).toHash();
+        if((element=="run-prefix")&&(!runtimeValues.value(element).toList().isEmpty()))
+            runPrefix = runtimeValues.value(element).toList();
         if((element=="launchables")&&(!runtimeValues.value(element).toHash().isEmpty()))
             launchables = runtimeValues.value(element).toHash();
-        if((element=="run-suffix")&&(!runtimeValues.value(element).toHash().isEmpty()))
-            runSuffix = runtimeValues.value(element).toHash();
+        if((element=="run-suffix")&&(!runtimeValues.value(element).toList().isEmpty()))
+            runSuffix = runtimeValues.value(element).toList();
     }
 
-    //We compile the
+    //We compile the run prefixes and suffixes to strings that we may use much more easily
+    QString runprefixStr,runsuffixStr;
+    for(int i = 0;i<runPrefix.count();i++){
+        runprefixStr.append(" "+runPrefix.at(i).toHash().value("command").toString());
+    }
+    for(int i = 0;i<runSuffix.count();i++){
+        runsuffixStr.append(" "+runSuffix.at(i).toHash().value("command").toString());
+    }
 
     doPrerun();
 
     //This is where the magic happens.
     // We need to see if the 'global.detachable-process'-key is true
     bool isDetach;
-    foreach(QString key, activeOptions.keys()){
-        if(key=="global.detachable-process")
-            isDetach=activeOptions.value(key).toBool();
-    }
+    if(launchId=="default")
+        foreach(QString key, activeOptions.keys())
+            if(key=="global.detachable-process")
+                isDetach=activeOptions.value(key).toBool();
 
     QString desktopTitle;
     foreach(QString launchable,launchables.keys())
@@ -968,13 +975,15 @@ int JasonParser::runProcesses(QString launchId){
                     name=resolveVariable(launchObject.value(key).toString());
             }
             if(launchId=="default"){
-                foreach(QString key,launchObject.keys())
-                    if(key=="desktop.title")
-                        name="Launching "+resolveVariable(launchObject.value(key).toString());
+                foreach(QString key,launchables.value("default.desktop").toHash().keys())
+                    if(key=="displayname")
+                        name=resolveVariable(launchables.value("default.desktop").toHash().value(key).toString());
             }
             desktopTitle=name;
+//            updateProgressText("Currently launching "+name);
+            updateProgressTitle(name);
             if(!argument.isEmpty())
-                executeProcess(argument,program,workDir,name,QString(),QString());
+                executeProcess(argument,program,workDir,name,runprefixStr,runsuffixStr);
         }
     //Aaaand it's gone.
 
@@ -1109,7 +1118,7 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     executer.setProcessEnvironment(procEnv);
     executer.setProcessChannelMode(QProcess::SeparateChannels);
     if(!workDir.isEmpty())
-        executer.setWorkingDirectory(workDir); //Set working directory
+        executer.setWorkingDirectory(workDir);
     executer.setProgram(shell);
     arguments.append(shellArg);
     arguments.append("--");
@@ -1118,31 +1127,35 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     execString = program+" "+argument;
     //We apply the prefixes/suffixes
     if(!runprefix.isEmpty())
-        execString.prepend(runprefix);
+        execString.prepend(runprefix+" ");
     if(!runsuffix.isEmpty())
-        execString.append(runsuffix);
+        execString.append(" "+runsuffix);
 
     arguments.append(execString);
     executer.setArguments(arguments);
+
+    //Connect signals and slots as well as update the title.
     connect(&executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
     connect(&executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
     connect(&executer,SIGNAL(started()),SLOT(processStarted()));
-    updateProgressText(title);
+    updateProgressText(tr("Launching")+" "+title);
+
     executer.start();
     executer.waitForFinished();
 }
 
 void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus){
     /*
+     * We won't care about exitStatus for now.
      * broadcastMessage() function shows a QMessageBox, its prototype is:
      * int,QString
      * where int is either 0, success, 1, warning, 2, error, or 3, disabled. (The last one exists because I am lazy.)
      * The QString is just the message it shows.
     */
     if(exitCode==0){
-        broadcastMessage(3,"Process exited successfully.\n");
+        broadcastMessage(3,tr("Process exited successfully."));
     }else
-        broadcastMessage(2,"Process exited with status "+QString::number(exitCode)+".\n");
+        broadcastMessage(2,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){

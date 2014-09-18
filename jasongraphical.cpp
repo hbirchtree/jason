@@ -45,21 +45,19 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
 void JasonGraphical::showMessage(int status, QString message){
     QMessageBox *messageBox = new QMessageBox;
-    return;
+//    return;
     if(status==0)
-        messageBox->information(this,"Jason information",message);
+        messageBox->information(this,tr("Jason information"),message);
     if(status==1)
-        messageBox->warning(this,"Jason warning",message);
+        messageBox->warning(this,tr("Jason warning"),message);
     if(status==2)
-        messageBox->warning(this,"Jason error",message);
+        messageBox->warning(this,tr("Jason error"),message);
 }
 
 void JasonGraphical::detachedMessage(QString title){
-    qDebug() << "detached program";
     QMessageBox detachedProgramNotify;
-    QString windowTitle = "Jason - Detached process";
-    QString text = title+" is currently detached. Close this window to notify Jason when it has been closed properly.";
+    QString windowTitle = tr("Jason - Detached process");
+    QString text = title+tr(" is currently detached. Close this window to notify Jason when it has been closed properly.");
     detachedProgramNotify.information(this,windowTitle,text,tr("It is closed"));
-    qDebug() << "calling postrun";
     emit detachedHasClosed();
 }

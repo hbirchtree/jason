@@ -7,17 +7,17 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QApplication::setApplicationName("Jason");
-    QApplication::setApplicationVersion("0.6");
+    QApplication::setApplicationVersion("0.9");
 
     //Parse the command line
     QCommandLineParser cParse;
     cParse.setApplicationDescription("Jason launcher");
     cParse.addHelpOption();
-    cParse.addPositionalArgument("file",QCoreApplication::translate("init","File to open"));
-    QCommandLineOption desktopAction = QCommandLineOption("action",QCoreApplication::translate("init","Action within the Jason document to launch"),"action","");
-    QCommandLineOption desktopGen = QCommandLineOption("desktop-file-generate",QCoreApplication::translate("init","Create a desktop file"),"desktop-file-generate","");
+    cParse.addPositionalArgument("file",QApplication::translate("init","File to open"));
+    QCommandLineOption desktopAction = QCommandLineOption("action",QApplication::translate("init","Action within the Jason document to launch"),"action","");
+    QCommandLineOption desktopGen = QCommandLineOption("desktop-file-generate",QApplication::translate("init","Create a desktop file"),"desktop-file-generate","");
     desktopAction.setValueName("action");
-    desktopGen.setValueName("output .desktop file");
+    desktopGen.setValueName(QApplication::translate("init","output .desktop file"));
     cParse.addOption(desktopAction);
     cParse.addOption(desktopGen);
     //Actual processing

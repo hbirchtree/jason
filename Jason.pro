@@ -18,3 +18,6 @@ SOURCES += main.cpp \
 
 HEADERS  += jasonparser.h \
     jasongraphical.h
+
+TRANSLATIONS += \
+    jason-en.ts
