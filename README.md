@@ -10,7 +10,7 @@ Far off in the distance:
 Planned features or things to do:
  - Desktop file generation (Easy)
  -  A window for showing error messages if there are any (Easy, too)
- -  Making a manual on how it all works. (Currently, one has to read the code in order to comprehend how it works.)
+ -  Making a manual on how it all works. (Currently, one has to read the code in order to comprehend how it works.) (Kind of done? The MANUAL.md file is really ugly, though.)
 
 Finished features:
  - The GUI! It is quite simple, but it works in a satisfactory way, not taking up more space than it needs to.
