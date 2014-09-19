@@ -186,6 +186,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         runtimeValues.insert("launchables",QHash<QString,QVariant>());
     }
     QStringList activeSystems;
+    QString currSystemConfPrefix;
     foreach(QString import,importedFiles)
         jsonParse(jsonOpenFile(import),3);
     foreach(QString option,activeOptions.keys()){
@@ -198,6 +199,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
                     activeSystems.append(currentSystem.value(key).toString());
                 if(key=="inherit")
                     activeSystems.append(currentSystem.value(key).toString().split(","));
+                if(key=="config-prefix")
+                    currSystemConfPrefix=currentSystem.value(key).toString();
             }
             if(systemActivate(currentSystem,activeSystems)!=0)
                 return 1;
@@ -217,10 +220,11 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
 
     foreach(QString key, mainTree.keys()){
         QJsonValue instanceValue = mainTree.value(key);
-        if(key.endsWith(".prerun"))
-            insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
-        if(key.endsWith(".postrun"))
-            insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),1);
+        if(key.startsWith(currSystemConfPrefix)){            if(key.endsWith(".prerun"))
+                insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
+            if(key.endsWith(".postrun"))
+                insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),1);
+        }
     }
     return 0;
 }
@@ -726,7 +730,7 @@ void JasonParser::environmentActivate(QHash<QString,QVariant> environmentHash,QS
                     if(key.split(".")[0]==system){
                         QString execLine = resolveVariable(environmentHash.value(key).toString());
                         QHash<QString,QVariant> runtimeReturnHash;
-                        runtimeReturnHash.insert("command",execLine);
+                        runtimeReturnHash.insert("command",resolveVariable(execLine));
                         addToRuntime("run-prefix",runtimeReturnHash);
                     }
     }else if(type=="run-suffix"){
