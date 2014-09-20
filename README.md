@@ -8,12 +8,14 @@ Far off in the distance:
  - A GUI for making Jason-compatible JSON files?
 
 Planned features or things to do:
- - Desktop file generation (Easy)
- -  A window for showing error messages if there are any (Easy, too)
- -  Making a manual on how it all works. (Currently, one has to read the code in order to comprehend how it works.) (Kind of done? The MANUAL.md file is really ugly, though.)
+ - Nothing. I'm done with this for now.
+
 
 Finished features:
  - The GUI! It is quite simple, but it works in a satisfactory way, not taking up more space than it needs to.
  - A decent enough structure for JSON, still needs *some* more features as I have been writing the parser to cope with the example files which do not bring up every possible scenario, but the ground work is there.
  - Tons of configurability for launching. Really needs a manual on how it works, but until then I (the developer) would say it works decently for a wide enough amount of features, and it is pretty fast even though there are some bad programming choices inside it. (Hash tables. Too many of them.)
  - Some ground-work for desktop actions, which already are parsed fully and launchable, but it needs a function that prints a .desktop file containing it all.
+ -  Making a manual on how it all works. (Currently, one has to read the code in order to comprehend how it works.) (Kind of done? The MANUAL.md file is really ugly, though.)
+ -  A window for showing error messages if there are any
+ -  Desktop file generation
