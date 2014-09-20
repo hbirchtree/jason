@@ -142,6 +142,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
          *  - information is only gathered in this phase unless it is a subsystem of type constant, is a
          * global variable
          */
+            updateProgressText(tr("Gathering fundamental values"));
             if(key=="systems")
                 underlyingObjects.insert("systems",jsonExamineArray(instanceValue.toArray()));
             if(key=="variables")
@@ -163,8 +164,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
  * Parses through the options of the initial file only, will see if it is a good idea to parse
  * through the imported files as well.
 */
+    updateProgressText(tr("Gathering active options"));
     foreach(QString key,mainTree.keys()){
-//        qDebug() << "jsonParse stage 2:" << key;
         QJsonValue instanceValue = mainTree.value(key);
         if(key.startsWith("subsystem."))
             activeOptions.insert(key,jsonExamineValue(instanceValue));
@@ -218,6 +219,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         runtimeValues.insert("sys-postrun",QList<QVariant>());
         runtimeValues.insert("launchables",QHash<QString,QVariant>());
     }
+    updateProgressText(tr("Activating main system"));
     QStringList activeSystems;
 //    QString currSystemConfPrefix;
     foreach(QString import,importedFiles)
@@ -239,7 +241,9 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
                 return 1;
         }
     }
+    updateProgressText(tr("Resolving variables"));
     resolveVariables();
+    updateProgressText(tr("Activating subsystems"));
     foreach(QString option,activeOptions.keys())
         if(option.startsWith("subsystem.")){
             QString subsystemName = option;
@@ -249,12 +253,15 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
                     subsystemActivate(subsystems.value(sub),activeOptions.value(option).toString(),activeSystems);
         }
 
+    updateProgressText(tr("Resolving variables"));
     resolveVariables();
 
+    updateProgressText(tr("Processing preruns and postruns"));
     foreach(QString key, activeOptions.keys()){
         QVariant instanceValue = activeOptions.value(key);
         foreach(QString system,activeSystems)
             if(key.startsWith(systemTable.value(system).toHash().value("config-prefix").toString())){ //I puked all over my keyboard while writing this.
+                qDebug() << key << instanceValue.toJsonArray();
                 if(key.endsWith(".prerun"))
                     insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),0);
                 if(key.endsWith(".postrun"))
@@ -1026,14 +1033,12 @@ int JasonParser::runProcesses(QString launchId){
                         name=resolveVariable(launchables.value("default.desktop").toHash().value(key).toString());
             }
             desktopTitle=name;
-//            updateProgressText("Currently launching "+name);
             updateProgressTitle(name);
-            toggleProgressVisible(false);
+//            toggleProgressVisible(false);
             connect(this,SIGNAL(mainProcessEnd()),SLOT(doPostrun()));
-//            broadcastMessage(0,tr("Running now"));
             if(!argument.isEmpty())
                 executeProcess(argument,program,workDir,name,runprefixStr,runsuffixStr);
-            toggleProgressVisible(true);
+//            toggleProgressVisible(true);
         }
     //Aaaand it's gone.
 
@@ -1161,13 +1166,13 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     if(shell.isEmpty())
         return;
 
-    QProcess executer;
+    QProcess *executer = new QProcess(this);
     QStringList arguments;
-    executer.setProcessEnvironment(procEnv);
-    executer.setProcessChannelMode(QProcess::SeparateChannels);
+    executer->setProcessEnvironment(procEnv);
+    executer->setProcessChannelMode(QProcess::SeparateChannels);
     if(!workDir.isEmpty())
-        executer.setWorkingDirectory(workDir);
-    executer.setProgram(shell);
+        executer->setWorkingDirectory(workDir);
+    executer->setProgram(shell);
     arguments.append(shellArg);
     arguments.append("--");
 
@@ -1180,25 +1185,25 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
         execString.append(" "+runsuffix);
 
     arguments.append(execString);
-    executer.setArguments(arguments);
+    executer->setArguments(arguments);
 
     //Connect signals and slots as well as update the title.
-    connect(&executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
-    connect(&executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
-    connect(&executer,SIGNAL(started()),SLOT(processStarted()));
+    connect(executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
+    connect(executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
+    connect(executer,SIGNAL(started()),SLOT(processStarted()));
     updateProgressText(title);
 
-    executer.start();
-    executer.waitForFinished();
-    if((executer.exitCode()!=0)||(executer.exitStatus()!=0)){
+    executer->start();
+    executer->waitForFinished();
+    if((executer->exitCode()!=0)||(executer->exitStatus()!=0)){
         QString stdOut,stdErr,argumentString;
-        stdOut = executer.readAllStandardOutput();
-        stdErr = executer.readAllStandardError();
-        foreach(QString arg,executer.arguments())
+        stdOut = executer->readAllStandardOutput();
+        stdErr = executer->readAllStandardError();
+        foreach(QString arg,executer->arguments())
             argumentString.append(arg+" ");
-        stdOut.prepend(tr("Executed: ")+executer.program()+" "+argumentString+"\n");
-        stdOut.prepend(tr("Process returned value ")+QString::number(executer.exitCode())+"\n");
-        stdOut.prepend(tr("QProcess returned value ")+QString::number(executer.exitStatus())+"\n");
+        stdOut.prepend(tr("Executed: ")+executer->program()+" "+argumentString+"\n");
+        stdOut.prepend(tr("Process returned value ")+QString::number(executer->exitCode())+"\n");
+        stdOut.prepend(tr("QProcess returned value ")+QString::number(executer->exitStatus())+"\n");
         emit emitOutput(stdOut,stdErr);
     }
 }
@@ -1218,7 +1223,7 @@ void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){
-    broadcastMessage(2,tr("QProcess exited with status:")+" "+processError);
+    broadcastMessage(2,tr("QProcess exited with status:")+" "+QString::number(processError));
 //    emit processFailed(processError);
 }
 

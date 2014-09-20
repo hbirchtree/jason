@@ -29,6 +29,7 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
     //Progress window
     connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
+    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
     connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
     connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));
@@ -39,13 +40,14 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     connect(this,SIGNAL(detachedHasClosed()),&jParse,SLOT(detachedMainProcessClosed()));
     connect(&jParse,SIGNAL(emitOutput(QString,QString)),this,SLOT(showOutput(QString,QString)));
 
+    QEventLoop waitingLoop;
+    connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
     workerThread->start();
-    progressWindow->exec();
+    progressWindow->show();
+
     /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
      * This is likely the fix to that problem.
     */
-    QEventLoop waitingLoop;
-    connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
     waitingLoop.exec();
 }
 
@@ -80,4 +82,9 @@ void JasonGraphical::showOutput(QString stdOut, QString stdErr){
     outputLayout.addWidget(&errEdit,1,2);
     outputWindow.setLayout(&outputLayout);
     outputWindow.exec();
+}
+
+void JasonGraphical::printMessage(QString message){
+    //Simple implementation to print to stdout without messing with qDebug all over
+    printf("%s\n",qPrintable(message));
 }

@@ -95,6 +95,7 @@ private:
     int runProcesses(QString launchId);
     void executeProcess(QString argument,QString program,QString workDir, QString title, QString runprefix, QString runsuffix);
     void generateDesktopFile(QString desktopFile,QString jasonPath, QString inputDoc);
+    QProcess *executer;
 
     //Hashes/arrays/vectors
     QHash<QString, QString> substitutes;

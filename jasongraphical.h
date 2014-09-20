@@ -38,6 +38,7 @@ public slots:
     void showMessage(int status,QString message);
     void detachedMessage(QString title);
     void showOutput(QString stdOut,QString stdErr);
+    void printMessage(QString message);
 };
 
 #endif // JASONGRAPHICAL_H
