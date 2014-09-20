@@ -35,21 +35,31 @@ void JasonParser::startParse(){
     desktopFile=startOpts.value("desktop-file");
     jasonPath=startOpts.value("jason-path");
     if(jsonParse(jsonOpenFile(startDocument),1)!=0){
+        updateProgressText(tr("Error occured"));
         broadcastMessage(2,tr("Apples is stuck in a tree! We need to call the fire department!\n"));
+        emit toggleCloseButton(true);
         emit finishedProcessing();
         return;
     }
 
     if(desktopFile.isEmpty()){
         if(runProcesses(actionId)!=0){
+            updateProgressText(tr("Error occured"));
             broadcastMessage(2,tr("Shit.\n"));
+            emit toggleCloseButton(true);
             emit finishedProcessing();
             return;
         }
     }else{
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         generateDesktopFile(desktopFile,jasonPath,startDocument);
+        updateProgressText(tr("Desktop file was generated successfully."));
     }
+    updateProgressText(tr("Nothing more to do."));
+    QEventLoop waitForEnd;
+    connect(this,SIGNAL(finishedProcessing()),&waitForEnd,SLOT(quit()));
+    waitForEnd.exec();
+    return;
 }
 
 void JasonParser::setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath){
@@ -104,7 +114,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
      *
      * Parameter int:
      *   - 1 means it runs the main thread.
-     *   - 2 is looking for stage 1 objects
+     *   - 2 is looking for stage 1 objects and active options
      *   - 3 is looking for active options
 */
     QJsonObject mainTree = jDoc.object();
@@ -141,11 +151,12 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
             if(key=="subsystems")
                 underlyingObjects.insert("subsystems",jsonExamineArray(instanceValue.toArray()));
         }
-        parseUnderlyingObjects(underlyingObjects);
+        if(parseUnderlyingObjects(underlyingObjects)!=0){
+            broadcastMessage(2,tr("Failed to parse underlying objects. Will not proceed."));
+            return 1;
+        }
         procEnv.insert(QProcessEnvironment::systemEnvironment());
     }
-    if(level==2)
-        return 0;
 /*
  * Stage 2:
  * Where options specified by the user or distributor are applied.
@@ -161,8 +172,18 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
             desktopFileBuild(instanceValue.toObject());
         foreach(QString systemKey,systemTable.keys()){
             QString configPrefix = systemTable.value(systemKey).toHash().value("config-prefix").toString();
-            if((key.startsWith(configPrefix))&&(!instanceValue.toString().isEmpty()))
-                activeOptions.insert(key,instanceValue.toString());
+            if((key.startsWith(configPrefix))&&(!instanceValue.isUndefined())){
+                if(instanceValue.isString())
+                    activeOptions.insert(key,instanceValue.toString());
+                if(instanceValue.isObject())
+                    activeOptions.insert(key,instanceValue.toObject());
+                if(instanceValue.isDouble())
+                    activeOptions.insert(key,instanceValue.toDouble());
+                if(instanceValue.isArray())
+                    activeOptions.insert(key,instanceValue.toArray());
+                if(instanceValue.isBool())
+                    activeOptions.insert(key,instanceValue.toBool());
+            }
         }
         if(key.startsWith("global.")){
             if(instanceValue.isString())
@@ -177,7 +198,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         if(key=="shell.properties")
             activeOptions.insert(key,instanceValue.toObject());
     }
-    if(level==3)
+    if((level==3)||(level==2))
         return 0;
 
 /*
@@ -198,7 +219,7 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         runtimeValues.insert("launchables",QHash<QString,QVariant>());
     }
     QStringList activeSystems;
-    QString currSystemConfPrefix;
+//    QString currSystemConfPrefix;
     foreach(QString import,importedFiles)
         jsonParse(jsonOpenFile(import),3);
     foreach(QString option,activeOptions.keys()){
@@ -211,8 +232,8 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
                     activeSystems.append(currentSystem.value(key).toString());
                 if(key=="inherit")
                     activeSystems.append(currentSystem.value(key).toString().split(","));
-                if(key=="config-prefix")
-                    currSystemConfPrefix=currentSystem.value(key).toString();
+//                if(key=="config-prefix")
+//                    currSystemConfPrefix=currentSystem.value(key).toString();
             }
             if(systemActivate(currentSystem,activeSystems)!=0)
                 return 1;
@@ -230,13 +251,15 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
 
     resolveVariables();
 
-    foreach(QString key, mainTree.keys()){
-        QJsonValue instanceValue = mainTree.value(key);
-        if(key.startsWith(currSystemConfPrefix)){            if(key.endsWith(".prerun"))
-                insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),0);
-            if(key.endsWith(".postrun"))
-                insertPrerunPostrun(jsonExamineArray(instanceValue.toArray()),1);
-        }
+    foreach(QString key, activeOptions.keys()){
+        QVariant instanceValue = activeOptions.value(key);
+        foreach(QString system,activeSystems)
+            if(key.startsWith(systemTable.value(system).toHash().value("config-prefix").toString())){ //I puked all over my keyboard while writing this.
+                if(key.endsWith(".prerun"))
+                    insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),0);
+                if(key.endsWith(".postrun"))
+                    insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),1);
+            }
     }
     return 0;
 }
@@ -425,12 +448,10 @@ void JasonParser::variablesImport(QHash<QString,QVariant> variables){
 }
 
 
-void JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant> > underlyingObjects){
+int JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant> > underlyingObjects){
     QHash<QString, QVariant> importTable;
     QHash<QString, QVariant> variablesTable;
     QHash<QString, QVariant> subsystemTable;
-    QHash<QString, QVariant> prerunTable;
-    QHash<QString, QVariant> postrunTable;
     QHash<QString, QVariant> systemTTable;
     //Grab tables from inside the input table
     foreach(QString key, underlyingObjects.keys()){
@@ -440,10 +461,6 @@ void JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant>
             variablesTable = underlyingObjects.value(key);
         if(key=="subsystems")
             subsystemTable = underlyingObjects.value(key);
-        if(key.endsWith(".prerun"))
-            prerunTable = underlyingObjects.value(key);
-        if(key.endsWith(".postrun"))
-            postrunTable = underlyingObjects.value(key);
         if(key=="systems")
             systemTTable = underlyingObjects.value(key);
     }
@@ -462,10 +479,10 @@ void JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant>
     foreach(QString key,subsystemTable.keys())
         subsystemHandle(subsystemTable.value(key).toHash());
     foreach(QString key,systemTTable.keys())
-        systemHandle(systemTTable.value(key).toHash());
+        if(systemHandle(systemTTable.value(key).toHash())!=0)
+            return 1;
 
-    insertPrerunPostrun(prerunTable,0);
-    insertPrerunPostrun(postrunTable,1);
+    return 0;
 }
 
 
@@ -578,16 +595,29 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
 }
 
 
-void JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
+int JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
     QHash<QString,QVariant> systemHash;
     foreach(QString key, systemElement.keys()){
-        if(key=="config-prefix")
+        if(key=="config-prefix"){
+            if(systemElement.value(key).toString().isEmpty()){
+                broadcastMessage(2,tr("No configuration prefix for the system was provided. Will not proceed."));
+                return 1;
+            }
+
             systemHash.insert(key,systemElement.value(key).toString());
+        }
         if(key=="launch-prefix") //prefix for command line, ex. "[prefix, ex. wine] test.exe"
             systemHash.insert(key,systemElement.value(key).toString());
         if(key=="launch-suffix") //suffix for command line, ex. "wine test.exe [suffix]"
             systemHash.insert(key,systemElement.value(key).toString());
-        if(key=="identifier") //the different keys found in "launchtype"
+        if(key=="identifier"){ //the different keys found in "launchtype"
+            if(systemElement.value(key).toString().isEmpty()){
+                broadcastMessage(2,tr("No identifier for the system was provided. Will not proceed."));
+                return 1;
+            }
+
+            systemHash.insert(key,systemElement.value(key).toString());
+        }
             systemHash.insert(key,systemElement.value(key).toString());
         if(key=="variables") //internal variables, with different types such as config-input
             systemHash.insert(key,systemElement.value(key).toJsonArray());
@@ -597,6 +627,7 @@ void JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
             systemHash.insert(key,systemElement.value(key).toString());
     }
     systemTable.insert(systemHash.value("identifier").toString(),systemHash);
+    return 0;
 }
 
 
@@ -998,19 +1029,18 @@ int JasonParser::runProcesses(QString launchId){
 //            updateProgressText("Currently launching "+name);
             updateProgressTitle(name);
             toggleProgressVisible(false);
+            connect(this,SIGNAL(mainProcessEnd()),SLOT(doPostrun()));
+//            broadcastMessage(0,tr("Running now"));
             if(!argument.isEmpty())
                 executeProcess(argument,program,workDir,name,runprefixStr,runsuffixStr);
             toggleProgressVisible(true);
         }
     //Aaaand it's gone.
 
-    connect(this,SIGNAL(mainProcessEnd()),SLOT(doPostrun()));
-
     if(isDetach){
         emit displayDetachedMessage(desktopTitle);
     }else
         emit mainProcessEnd();
-
     return 0;
 }
 
@@ -1054,6 +1084,7 @@ void JasonParser::doPostrun(){
             executeProcess(argument,program,workDir,name,QString(),QString());
         }
     }
+    emit toggleCloseButton(true);
     emit finishedProcessing(); //When postrun is over, the program is one and so it is appropriate to call it here.
 }
 
@@ -1155,21 +1186,21 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     connect(&executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
     connect(&executer, SIGNAL(error(QProcess::ProcessError)),SLOT(processOutputError(QProcess::ProcessError)));
     connect(&executer,SIGNAL(started()),SLOT(processStarted()));
-    updateProgressText(tr("Launching")+" "+title);
+    updateProgressText(title);
 
     executer.start();
     executer.waitForFinished();
-    if(executer.exitCode()!=0){
+    if((executer.exitCode()!=0)||(executer.exitStatus()!=0)){
         QString stdOut,stdErr,argumentString;
         stdOut = executer.readAllStandardOutput();
         stdErr = executer.readAllStandardError();
         foreach(QString arg,executer.arguments())
             argumentString.append(arg+" ");
-        stdOut.prepend("Executed: "+executer.program()+" "+argumentString+"\n");
-        stdOut.prepend("Process returned value "+QString::number(executer.exitCode())+"\n");
+        stdOut.prepend(tr("Executed: ")+executer.program()+" "+argumentString+"\n");
+        stdOut.prepend(tr("Process returned value ")+QString::number(executer.exitCode())+"\n");
+        stdOut.prepend(tr("QProcess returned value ")+QString::number(executer.exitStatus())+"\n");
         emit emitOutput(stdOut,stdErr);
     }
-
 }
 
 void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus){
@@ -1180,15 +1211,15 @@ void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
      * where int is either 0, success, 1, warning, 2, error, or 3, disabled. (The last one exists because I am lazy.)
      * The QString is just the message it shows.
     */
-    if(exitCode==0){
-        broadcastMessage(3,tr("Process exited successfully."));
-    }else
-        broadcastMessage(3,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
+    if(exitCode!=0)
+        broadcastMessage(1,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
+    if(exitStatus!=0)
+        broadcastMessage(1,tr("QProcess exited with status:")+" "+QString::number(exitStatus)+".");
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){
-//    qDebug() << processError;
-    emit processFailed(processError);
+    broadcastMessage(2,tr("QProcess exited with status:")+" "+processError);
+//    emit processFailed(processError);
 }
 
 void JasonParser::processStarted(){
@@ -1206,11 +1237,13 @@ void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QS
         broadcastMessage(1,tr("Warning: The filename specified for the output .desktop file does not have the correct extension.\n"));
     outputDesktopFile.setFileName(desktopFile);
     if(outputDesktopFile.exists()){
+        emit toggleCloseButton(true);
         broadcastMessage(1,tr("Warning: The file exists. Will not proceed.\n"));
         emit finishedProcessing();
         return;
     }
     if(!outputDesktopFile.open(QIODevice::WriteOnly | QIODevice::Text)){
+        emit toggleCloseButton(true);
         broadcastMessage(1,tr("Warning: Failed to open the output file for writing. Will not proceed."));
         emit finishedProcessing();
         return;
@@ -1270,5 +1303,6 @@ void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QS
     outputDesktopFile.setPermissions(QFile::ExeOwner|outputDesktopFile.permissions());
     outputDesktopFile.close();
 
+    emit toggleCloseButton(true);
     emit finishedProcessing();
 }

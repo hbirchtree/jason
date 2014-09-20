@@ -41,6 +41,12 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
     workerThread->start();
     progressWindow->exec();
+    /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
+     * This is likely the fix to that problem.
+    */
+    QEventLoop waitingLoop;
+    connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
+    waitingLoop.exec();
 }
 
 void JasonGraphical::showMessage(int status, QString message){

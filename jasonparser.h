@@ -17,6 +17,7 @@
 
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QEventLoop>
 
 class JasonParser : public QObject
 {
@@ -44,6 +45,7 @@ signals:
 
     //Related to the general look and workings
     void finishedProcessing();
+    void toggleCloseButton(bool);
     void updateProgressText(QString);
     void updateProgressTitle(QString);
     void broadcastMessage(int,QString);
@@ -75,10 +77,10 @@ private:
     void variableHandle(QString key, QString value);
     void resolveVariables();
     QString resolveVariable(QString variable);
-    void parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
+    int parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
     void desktopFileBuild(QJsonObject desktopObject);
     void parseImportArray(QJsonArray imports);
-    void systemHandle(QHash<QString,QVariant> systemElement);
+    int systemHandle(QHash<QString,QVariant> systemElement);
 
     //Activate options
     int systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
