@@ -29,36 +29,48 @@ void JasonParser::testEnvironment(){
 
 void JasonParser::startParse(){
     updateProgressText(tr("Starting to parse JSON document"));
-    QString startDocument,actionId,desktopFile;
+    QString startDocument,actionId,desktopFile,jasonPath;
     startDocument=startOpts.value("start-document");
     actionId=startOpts.value("action-id");
     desktopFile=startOpts.value("desktop-file");
+    jasonPath=startOpts.value("jason-path");
     if(jsonParse(jsonOpenFile(startDocument),1)!=0){
         broadcastMessage(2,tr("Apples is stuck in a tree! We need to call the fire department!\n"));
+        emit finishedProcessing();
         return;
     }
 
     if(desktopFile.isEmpty()){
-        if(runProcesses(actionId)!=0)
+        if(runProcesses(actionId)!=0){
             broadcastMessage(2,tr("Shit.\n"));
+            emit finishedProcessing();
+            return;
+        }
     }else{
-        qDebug() << "would generate a .desktop file here.";
+        updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
+        generateDesktopFile(desktopFile,jasonPath,startDocument);
     }
 }
 
-void JasonParser::setStartOpts(QString startDocument, QString actionId, QString desktopFile){
+void JasonParser::setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath){
     if(!startDocument.isEmpty())
         startOpts.insert("start-document",startDocument);
     if(!actionId.isEmpty())
         startOpts.insert("action-id",actionId);
     if(!desktopFile.isEmpty())
         startOpts.insert("desktop-file",desktopFile);
+    if(!jasonPath.isEmpty())
+        startOpts.insert("jason-path",jasonPath);
+    QFileInfo cw(startDocument);
+    startOpts.insert("working-directory",cw.canonicalPath());
     return;
 }
 
 QJsonDocument JasonParser::jsonOpenFile(QString filename){
     QFile jDocFile;
-    jDocFile.setFileName(filename);
+    QFileInfo cw(filename);
+
+    jDocFile.setFileName(startOpts.value("working-directory")+"/"+cw.fileName());
     if (!jDocFile.exists()) {
         broadcastMessage(0,"ERROR: jDocFile::File not found\n");
         return QJsonDocument();
@@ -508,7 +520,7 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
  * A desktop action entry will use the appendage of --action [id] to make a distinction between the
  * different entries that may exist.
 */
-    QString dName,dDesc,dWMClass,dIcon;
+    QString dName,dDesc,dWMClass,dIcon,dCat;
     QHash<QString,QVariant> containerHash = runtimeValues.value("launchables").toHash();
     foreach(QString key, desktopObject.keys()){
         if(key=="desktop.displayname")
@@ -519,6 +531,8 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
             dWMClass = desktopObject.value(key).toString();
         if(key=="desktop.icon")
             dIcon = desktopObject.value(key).toString();
+        if(key=="desktop.categories")
+            dCat = desktopObject.value(key).toString();
         if(key.startsWith("desktop.action.")){
             QJsonObject action = desktopObject.value(key).toObject();
             QString aName,aExec,aID,aWD,aCPrefix,aLPrefix;
@@ -555,6 +569,7 @@ void JasonParser::desktopFileBuild(QJsonObject desktopObject){
     desktopHash.insert("displayname",dName);
     desktopHash.insert("description",dDesc);
     desktopHash.insert("wmclass",dWMClass);
+    desktopHash.insert("categories",dCat);
     desktopHash.insert("icon",dIcon);
     runtimeValues.remove("launchables");
     containerHash.insert("default.desktop",desktopHash);
@@ -809,7 +824,6 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
         }
     }
     QString mainExec,mainWDir;
-    bool detachStart;
     QString launchPrefix = systemElement.value("launch-prefix").toString(); //The launchprefix is determined by the launchtype of the main execution statement. If this does not match the main system, puke an error and refuse to continue, because it's not good practice to ditch the system that is chosen.
     foreach(QString key,activeOptions.keys())
         if(key.startsWith(configPrefix)){
@@ -818,8 +832,6 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
             }
             if(key.endsWith(".workdir"))
                 mainWDir = activeOptions.value(key).toString();
-            if(key=="global.detachable-process")
-                detachStart = activeOptions.value(key).toBool();
         }
     if(!mainExec.isEmpty()){
         if(mainExec.isEmpty()){
@@ -829,7 +841,6 @@ int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringLis
         runHash.insert("command",mainExec);
         runHash.insert("workingdir",mainWDir);
         runHash.insert("launch-prefix",launchPrefix);
-        runHash.insert("detachable",detachStart);
         QHash<QString,QVariant> containerHash = runtimeValues.value("launchables").toHash();
         runtimeValues.remove("launchables");
         containerHash.insert("default",runHash);
@@ -957,7 +968,7 @@ int JasonParser::runProcesses(QString launchId){
 
     //This is where the magic happens.
     // We need to see if the 'global.detachable-process'-key is true
-    bool isDetach;
+    bool isDetach = false;
     if(launchId=="default")
         foreach(QString key, activeOptions.keys())
             if(key=="global.detachable-process")
@@ -986,8 +997,10 @@ int JasonParser::runProcesses(QString launchId){
             desktopTitle=name;
 //            updateProgressText("Currently launching "+name);
             updateProgressTitle(name);
+            toggleProgressVisible(false);
             if(!argument.isEmpty())
                 executeProcess(argument,program,workDir,name,runprefixStr,runsuffixStr);
+            toggleProgressVisible(true);
         }
     //Aaaand it's gone.
 
@@ -1146,6 +1159,17 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
 
     executer.start();
     executer.waitForFinished();
+    if(executer.exitCode()!=0){
+        QString stdOut,stdErr,argumentString;
+        stdOut = executer.readAllStandardOutput();
+        stdErr = executer.readAllStandardError();
+        foreach(QString arg,executer.arguments())
+            argumentString.append(arg+" ");
+        stdOut.prepend("Executed: "+executer.program()+" "+argumentString+"\n");
+        stdOut.prepend("Process returned value "+QString::number(executer.exitCode())+"\n");
+        emit emitOutput(stdOut,stdErr);
+    }
+
 }
 
 void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus){
@@ -1159,11 +1183,11 @@ void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
     if(exitCode==0){
         broadcastMessage(3,tr("Process exited successfully."));
     }else
-        broadcastMessage(2,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
+        broadcastMessage(3,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){
-    qDebug() << processError;
+//    qDebug() << processError;
     emit processFailed(processError);
 }
 
@@ -1173,4 +1197,78 @@ void JasonParser::processStarted(){
 
 void JasonParser::detachedMainProcessClosed(){
     emit mainProcessEnd();
+}
+
+void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QString inputDoc){
+    //Not a very robust function, but I believe it is sufficient for its purpose.
+    QFile outputDesktopFile;
+    if(!desktopFile.endsWith(".desktop"))
+        broadcastMessage(1,tr("Warning: The filename specified for the output .desktop file does not have the correct extension.\n"));
+    outputDesktopFile.setFileName(desktopFile);
+    if(outputDesktopFile.exists()){
+        broadcastMessage(1,tr("Warning: The file exists. Will not proceed.\n"));
+        emit finishedProcessing();
+        return;
+    }
+    if(!outputDesktopFile.open(QIODevice::WriteOnly | QIODevice::Text)){
+        broadcastMessage(1,tr("Warning: Failed to open the output file for writing. Will not proceed."));
+        emit finishedProcessing();
+        return;
+    }
+    QString desktopActions;
+    QString outputContents;
+    outputContents.append("[Desktop Entry]\nVersion=1.0\nType=Application\nTerminal=False\nExec='%JASON_EXEC%' '%INPUT_FILE%'\n%DESKTOP_ACTION_LIST%\n");
+    foreach(QString entry,runtimeValues.keys())
+        if(entry=="launchables"){
+            QHash<QString,QVariant> launchables = runtimeValues.value(entry).toHash();
+            foreach(QString key,launchables.keys()){
+                if(key=="default.desktop"){
+                    QHash<QString,QVariant> defaultDesktop = launchables.value(key).toHash();
+                    foreach(QString dKey,defaultDesktop.keys()){
+                        if(dKey=="displayname")
+                            outputContents.append("Name="+defaultDesktop.value(dKey).toString()+"\n");
+                        if((dKey=="description")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
+                            outputContents.append("Comment="+defaultDesktop.value(dKey).toString()+"\n");
+                        if((dKey=="wmclass")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
+                            outputContents.append("StartupWMClass="+defaultDesktop.value(dKey).toString()+"\n");
+                        if((dKey=="icon")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
+                            outputContents.append("Icon="+defaultDesktop.value(dKey).toString()+"\n");
+                        if((dKey=="categories")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
+                            outputContents.append("Categories="+defaultDesktop.value(dKey).toString()+"\n");
+                    }
+                }
+            }
+            foreach(QString key,launchables.keys()){
+                if((key!="default")&&(key!="default.desktop")){
+                    QHash<QString,QVariant> desktopAction = launchables.value(key).toHash();
+                    QString desktopActionEntry;
+                    foreach(QString dKey,desktopAction.keys())
+                        if(dKey=="displayname"){
+                            desktopActions.append(key+";");
+                            desktopActionEntry = "[Desktop Action "+key+"]\nName="+desktopAction.value(dKey).toString()+"\nExec='%JASON_EXEC%' --action "+key+" '%INPUT_FILE%'\n";
+                        }
+                    outputContents.append("\n"+desktopActionEntry);
+                }
+            }
+        }
+    if(!jasonPath.isEmpty()){
+        QFileInfo jasonInfo(jasonPath);
+        outputContents.replace("%JASON_EXEC%",jasonInfo.canonicalFilePath());
+    }
+    if(!jasonPath.isEmpty()){
+        QFileInfo docInfo(inputDoc);
+        outputContents.replace("%INPUT_FILE%",docInfo.canonicalFilePath());
+        outputContents.replace("%WORKINGDIR%",docInfo.canonicalPath());
+    }
+    if(!desktopActions.isEmpty()){
+        outputContents.replace("%DESKTOP_ACTION_LIST%","Actions="+desktopActions);
+    }else
+        outputContents.replace("%DESKTOP_ACTION_LIST%",QString());
+
+    QTextStream outputDocument(&outputDesktopFile);
+    outputDocument << outputContents;
+    outputDesktopFile.setPermissions(QFile::ExeOwner|outputDesktopFile.permissions());
+    outputDesktopFile.close();
+
+    emit finishedProcessing();
 }

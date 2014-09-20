@@ -4,12 +4,10 @@
 JasonGraphical::JasonGraphical(QWidget *parent) :
     QWidget(parent)
 {
-    QProgressDialog loadingThingamajig;
-    QProgressBar testBar;
-    loadingThingamajig.setBar(&testBar);
+
 }
 
-void JasonGraphical::startParse(QString startDocument, QString actionId, QString desktopFile){
+void JasonGraphical::startParse(QString startDocument, QString actionId, QString desktopFile, QString jasonPath){
     QProgressDialog *progressWindow = new QProgressDialog(this);
     QPushButton *closeProgressWindowBtn = new QPushButton(this);
     closeProgressWindowBtn->setText(tr("Close"));
@@ -18,28 +16,30 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 //    progressWindow->setCancelButtonText(tr("Close"));
     progressWindow->setMinimum(0);
     progressWindow->setMaximum(0);
-    progressWindow->setFixedHeight(70);
-    progressWindow->setFixedWidth(300);
+    progressWindow->setFixedHeight(80);
+    progressWindow->setFixedWidth(450);
 
     //Open document
     JasonParser jParse;
     QThread *workerThread = new QThread;
     jParse.moveToThread(workerThread);
-    jParse.setStartOpts(startDocument,actionId,desktopFile);
+    jParse.setStartOpts(startDocument,actionId,desktopFile,jasonPath);
     connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
+
+    //Progress window
     connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
     connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
     connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));
-//    connect(&jParse,SIGNAL(updateProgressText(QString)),SLOT(setProgressText(QString)));
-//    connect(&jParse,SIGNAL(updateProgressTitle(QString)),SLOT(setProgressTitle(QString)));
+
+    //Displaying messages and etc
     connect(&jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
     connect(&jParse,SIGNAL(displayDetachedMessage(QString)),SLOT(detachedMessage(QString)));
     connect(this,SIGNAL(detachedHasClosed()),&jParse,SLOT(detachedMainProcessClosed()));
-    workerThread->start();
-//    showProgressWindow();
+    connect(&jParse,SIGNAL(emitOutput(QString,QString)),this,SLOT(showOutput(QString,QString)));
 
+    workerThread->start();
     progressWindow->exec();
 }
 
@@ -60,4 +60,18 @@ void JasonGraphical::detachedMessage(QString title){
     QString text = title+tr(" is currently detached. Close this window to notify Jason when it has been closed properly.");
     detachedProgramNotify.information(this,windowTitle,text,tr("It is closed"));
     emit detachedHasClosed();
+}
+
+void JasonGraphical::showOutput(QString stdOut, QString stdErr){
+    QDialog outputWindow(this);
+    QGridLayout outputLayout(this);
+    QTextEdit errEdit(this),outEdit(this);
+    errEdit.setReadOnly(true);
+    outEdit.setReadOnly(true);
+    errEdit.setText(stdErr);
+    outEdit.setText(stdOut);
+    outputLayout.addWidget(&outEdit,1,1);
+    outputLayout.addWidget(&errEdit,1,2);
+    outputWindow.setLayout(&outputLayout);
+    outputWindow.exec();
 }

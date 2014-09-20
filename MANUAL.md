@@ -20,7 +20,7 @@ imports: Loading more files and importing settings and objects from them.
 desktop.file: contains entries used in the .desktop file generation process.
     desktop.displayname: used in the Name= field as well as the GUI.
     desktop.description: used in the Comment= field (may fill in the Description= field as well?)
-    desktop.wmclass: used in the WMClass= field
+    desktop.wmclass: used in the StartupWMClass= field
     desktop.icon: used in the Icon= field and possibly in the GUI in the future
     desktop.action.*: an object containing a desktop action.
 	action-id: should match the suffix of the action, desktop.action.launcher for instance.

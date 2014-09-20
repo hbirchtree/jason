@@ -8,6 +8,8 @@
 #include <QJsonArray>
 
 #include <QFile>
+#include <QFileInfo>
+#include <QTextStream>
 #include <QDebug>
 #include <stdio.h>
 #include <QString>
@@ -25,7 +27,7 @@ public:
 
     //General
     void testEnvironment();
-    void setStartOpts(QString startDocument, QString actionId, QString desktopFile);
+    void setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath);
 
 public slots:
     void processStarted();
@@ -53,6 +55,7 @@ signals:
     void mainProcessEnd();
     void processFailed(QProcess::ProcessError);
     void processReturnOutput();
+    void emitOutput(QString,QString);
 
 private:
     //General
@@ -89,7 +92,7 @@ private:
     //Fucking finally
     int runProcesses(QString launchId);
     void executeProcess(QString argument,QString program,QString workDir, QString title, QString runprefix, QString runsuffix);
-    void generateDesktopFile(QString desktopFile);
+    void generateDesktopFile(QString desktopFile,QString jasonPath, QString inputDoc);
 
     //Hashes/arrays/vectors
     QHash<QString, QString> substitutes;

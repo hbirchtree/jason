@@ -3,13 +3,13 @@
 
 #include <QWidget>
 #include <QMessageBox>
+//For the progress window:
 #include <QProgressDialog>
-#include <QProgressBar>
 #include <QPushButton>
-#include <QLabel>
-#include <QSystemTrayIcon>
-#include <QMenu>
-#include <QMenu>
+//For the output window
+#include <QDialog>
+#include <QTextEdit>
+#include <QGridLayout>
 
 #include <QThread>
 
@@ -20,7 +20,7 @@ public:
     explicit JasonGraphical(QWidget *parent = 0);
 
 
-    void startParse(QString startDocument, QString actionId, QString desktopFile);
+    void startParse(QString startDocument, QString actionId, QString desktopFile, QString jasonPath);
 
 private:
     QProgressDialog *progressWindow;
@@ -37,6 +37,7 @@ signals:
 public slots:
     void showMessage(int status,QString message);
     void detachedMessage(QString title);
+    void showOutput(QString stdOut,QString stdErr);
 };
 
 #endif // JASONGRAPHICAL_H

@@ -21,3 +21,8 @@ HEADERS  += jasonparser.h \
 
 TRANSLATIONS += \
     jason-en.ts
+
+OTHER_FILES += \
+    jason-en.ts \
+    MANUAL.md \
+    README.md

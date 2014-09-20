@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     QString filename;
     if (posArgs.length()>=1){
         filename = posArgs[0];
-    } else
+    }else
         return 0;
 
     //Optional arguments
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     }
 
     JasonGraphical jasonGui;
-    jasonGui.startParse(filename,actionToLaunch,desktopFile);
+    jasonGui.startParse(filename,actionToLaunch,desktopFile,a.arguments()[0]);
 
     return 0;
 }
