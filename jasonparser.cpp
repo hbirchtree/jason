@@ -34,11 +34,11 @@ void JasonParser::startParse(){
     actionId=startOpts.value("action-id");
     desktopFile=startOpts.value("desktop-file");
     jasonPath=startOpts.value("jason-path");
-    if(jsonParse(jsonOpenFile(startDocument),1)!=0){
+    if(jsonParse(jsonOpenFile(startDocument))!=0){
         updateProgressText(tr("Error occured"));
         broadcastMessage(2,tr("Apples is stuck in a tree! We need to call the fire department!\n"));
         emit toggleCloseButton(true);
-        emit finishedProcessing();
+        emit failedProcessing();
         return;
     }
 
@@ -47,7 +47,7 @@ void JasonParser::startParse(){
             updateProgressText(tr("Error occured"));
             broadcastMessage(2,tr("Shit.\n"));
             emit toggleCloseButton(true);
-            emit finishedProcessing();
+            emit failedProcessing();
             return;
         }
     }else{
@@ -88,6 +88,7 @@ QJsonDocument JasonParser::jsonOpenFile(QString filename){
 
     if (!jDocFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
         broadcastMessage(2,"ERROR: jDocFile::Failed to open\n");
+        updateProgressText(tr("Failed to open file"));
         return QJsonDocument();
     }
     QJsonParseError initError;
@@ -96,86 +97,75 @@ QJsonDocument JasonParser::jsonOpenFile(QString filename){
         broadcastMessage(2,"ERROR: jDoc: "+initError.errorString()+"\n");
     if (jDoc.isNull() || jDoc.isEmpty()) {
         broadcastMessage(2,"ERROR: jDoc::IsNull or IsEmpty\n");
+        updateProgressText(tr("Failed to import file"));
         return QJsonDocument();
     }
     return jDoc;
 }
 
-int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to identify the parent instance of jsonOpenFile
-/*
-     *  - The JSON file is parsed in two stages; the JSON file is parsed randomly and as such
-     * you cannot expect data to appear at the right time. For this, parsing in two stages
-     * allows substituted values, systems, subsystems and etc. to listed in the first run
-     * and applied in the second run. The int level is used for recursive parsing where
-     * you do not want the process to proceed before everything is done.
-     *  - The execution and/or creation of a desktop file is done post-parsing when all variables
-     * are known and resolved.
-     *
-     *
-     * Parameter int:
-     *   - 1 means it runs the main thread.
-     *   - 2 is looking for stage 1 objects and active options
-     *   - 3 is looking for active options
-*/
-    QJsonObject mainTree = jDoc.object();
+int JasonParser::parseStage1(QJsonObject mainObject){
+    /*Stage 1: Parse information about systems, variables, subsystems
+     *  - Systems are used to start programs in a specific way, example system launch
+     *  versus WINE. They serve a .exec value that is used to launch their programs,
+     * which simply prepends a value to the QProcess command line.
+     *  - Variables in the context of Jason should work like shell variables where
+     * they are used for text substitution. They will pull in some essential system
+     * variables such as LD_LIBRARY_PATH, HOME, PATH, XDG_DATA_DIRS and several others
+     * that are useful in launching a program.
+     *  - Subsystems' behavior are decided by their type, and may rely on an enabler
+     * which modifies its behavior. The type may decide what other elements are used and
+     * may modify the environment, launch a program and more.
+     *  - Imports cause another .json file to be pulled in and parsed along with the
+     * original document. This may be used to share variables and systems between launchers.
+     *  - .prerun is used in conjunction with systems to run commands before the actual
+     * program is run.
+     *  - .postrun is used to run commands after the program has run.
+     *  - information is only gathered in this phase unless it is a subsystem of type constant, is a
+     * global variable
+     */
     QHash<QString,QHash<QString,QVariant> > underlyingObjects;
-    if(level!=3){
-        foreach(QString key, mainTree.keys()){
-            //        qDebug() << "jsonParse stage 1:" << key;
-            QJsonValue instanceValue = mainTree.value(key);
-            /*Stage 1: Parse information about systems, variables, subsystems
-         *  - Systems are used to start programs in a specific way, example system launch
-         *  versus WINE. They serve a .exec value that is used to launch their programs,
-         * which simply prepends a value to the QProcess command line.
-         *  - Variables in the context of Jason should work like shell variables where
-         * they are used for text substitution. They will pull in some essential system
-         * variables such as LD_LIBRARY_PATH, HOME, PATH, XDG_DATA_DIRS and several others
-         * that are useful in launching a program.
-         *  - Subsystems' behavior are decided by their type, and may rely on an enabler
-         * which modifies its behavior. The type may decide what other elements are used and
-         * may modify the environment, launch a program and more.
-         *  - Imports cause another .json file to be pulled in and parsed along with the
-         * original document. This may be used to share variables and systems between launchers.
-         *  - .prerun is used in conjunction with systems to run commands before the actual
-         * program is run.
-         *  - .postrun is used to run commands after the program has run.
-         *  - information is only gathered in this phase unless it is a subsystem of type constant, is a
-         * global variable
-         */
-            updateProgressText(tr("Gathering fundamental values"));
-            if(key=="systems")
-                underlyingObjects.insert("systems",jsonExamineArray(instanceValue.toArray()));
-            if(key=="variables")
-                underlyingObjects.insert("variables",jsonExamineArray(instanceValue.toArray()));
-            if(key=="imports")
-                underlyingObjects.insert("imports",jsonExamineArray(instanceValue.toArray()));
-            if(key=="subsystems")
-                underlyingObjects.insert("subsystems",jsonExamineArray(instanceValue.toArray()));
-        }
-        if(parseUnderlyingObjects(underlyingObjects)!=0){
-            broadcastMessage(2,tr("Failed to parse underlying objects. Will not proceed."));
-            return 1;
-        }
-        procEnv.insert(QProcessEnvironment::systemEnvironment());
+    foreach(QString key, mainObject.keys()){
+        QJsonValue instanceValue = mainObject.value(key);
+        if(key=="systems")
+            underlyingObjects.insert("systems",jsonExamineArray(instanceValue.toArray()));
+        if(key=="variables")
+            underlyingObjects.insert("variables",jsonExamineArray(instanceValue.toArray()));
+        if(key=="imports")
+            underlyingObjects.insert("imports",jsonExamineArray(instanceValue.toArray()));
+        if(key=="subsystems")
+            underlyingObjects.insert("subsystems",jsonExamineArray(instanceValue.toArray()));
     }
-/*
- * Stage 2:
- * Where options specified by the user or distributor are applied.
- * Parses through the options of the initial file only, will see if it is a good idea to parse
- * through the imported files as well.
-*/
-    updateProgressText(tr("Gathering active options"));
-    foreach(QString key,mainTree.keys()){
-        QJsonValue instanceValue = mainTree.value(key);
+    if(parseUnderlyingObjects(underlyingObjects)!=0)
+        return 1;
+    procEnv.insert(QProcessEnvironment::systemEnvironment());
+    return 0;
+}
+
+int JasonParser::parseStage2(QJsonObject mainObject){
+    /*
+     * Stage 2:
+     * Where options specified by the user or distributor are applied.
+     * Parses through the options of the initial file only, will see if it is a good idea to parse
+     * through the imported files as well.
+    */
+    foreach(QString key,mainObject.keys()){
+        QJsonValue instanceValue = mainObject.value(key);
         if(key.startsWith("subsystem."))
             activeOptions.insert(key,jsonExamineValue(instanceValue));
         if(key=="desktop.file")
             desktopFileBuild(instanceValue.toObject());
         foreach(QString systemKey,systemTable.keys()){
             QString configPrefix = systemTable.value(systemKey).toHash().value("config-prefix").toString();
-            if((key.startsWith(configPrefix))&&(!instanceValue.isUndefined())){
-                if(instanceValue.isString())
-                    activeOptions.insert(key,instanceValue.toString());
+            if((key.startsWith(configPrefix+"."))&&(!instanceValue.isUndefined())){
+                if(!instanceValue.isNull()){
+                    QString insertKey = key;
+                    int insertInt = 0;
+                    while(activeOptions.contains(insertKey)){
+                        insertInt++;
+                        insertKey = key+"."+QString::number(insertInt);
+                    }
+                    activeOptions.insert(insertKey,instanceValue.toString());
+                }
                 if(instanceValue.isObject())
                     activeOptions.insert(key,instanceValue.toObject());
                 if(instanceValue.isDouble())
@@ -199,8 +189,31 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         if(key=="shell.properties")
             activeOptions.insert(key,instanceValue.toObject());
     }
-    if((level==3)||(level==2))
-        return 0;
+    return 0;
+}
+
+int JasonParser::jsonParse(QJsonDocument jDoc){ //level is used to identify the parent instance of jsonOpenFile
+/*
+     *  - The JSON file is parsed in two stages; the JSON file is parsed randomly and as such
+     * you cannot expect data to appear at the right time. For this, parsing in two stages
+     * allows substituted values, systems, subsystems and etc. to listed in the first run
+     * and applied in the second run. The int level is used for recursive parsing where
+     * you do not want the process to proceed before everything is done.
+     *  - The execution and/or creation of a desktop file is done post-parsing when all variables
+     * are known and resolved.
+     *
+*/
+    QJsonObject mainTree = jDoc.object();
+    updateProgressText(tr("Gathering fundamental values"));
+    if(parseStage1(mainTree)!=0){
+        updateProgressText(tr("Failed to parse fundamental values. Will not proceed."));
+        return 1;
+    }
+
+    updateProgressText(tr("Gathering active options"));
+    parseStage2(mainTree);
+    foreach(QString import,importedFiles)
+        parseStage2(jsonOpenFile(import).object());
 
 /*
  * Stage 3:
@@ -212,18 +225,15 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
  * Subsystems will be triggered according to their type and what option is entered.
  *
 */
-    if(runtimeValues.isEmpty()){ //If the table is empty, initialize it with empty QStrings and QStringLists
+    updateProgressText(tr("Activating main system"));
+    if(runtimeValues.isEmpty()){ //If the table is empty, initialize it with empty objects
         runtimeValues.insert("run-prefix",QList<QVariant>());
         runtimeValues.insert("run-suffix",QList<QVariant>());
         runtimeValues.insert("sys-prerun",QList<QVariant>());
         runtimeValues.insert("sys-postrun",QList<QVariant>());
         runtimeValues.insert("launchables",QHash<QString,QVariant>());
     }
-    updateProgressText(tr("Activating main system"));
     QStringList activeSystems;
-//    QString currSystemConfPrefix;
-    foreach(QString import,importedFiles)
-        jsonParse(jsonOpenFile(import),3);
     foreach(QString option,activeOptions.keys()){
         if(option=="launchtype"){
             if(!systemTable.value(activeOptions.value("launchtype").toString()).isValid())
@@ -261,7 +271,6 @@ int JasonParser::jsonParse(QJsonDocument jDoc,int level){ //level is used to ide
         QVariant instanceValue = activeOptions.value(key);
         foreach(QString system,activeSystems)
             if(key.startsWith(systemTable.value(system).toHash().value("config-prefix").toString())){ //I puked all over my keyboard while writing this.
-                qDebug() << key << instanceValue.toJsonArray();
                 if(key.endsWith(".prerun"))
                     insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),0);
                 if(key.endsWith(".postrun"))
@@ -473,10 +482,13 @@ int JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant> 
     }
     //Handle the tables in their different ways, nothing will be returned
     foreach(QString key,importTable.keys())
-        foreach(QString kKey, importTable.value(key).toHash().keys()){
-            jsonParse(jsonOpenFile(importTable.value(key).toHash().value(kKey).toString()),2);
-            importedFiles.append(importTable.value(key).toHash().value(kKey).toString());
-        }
+        foreach(QString kKey, importTable.value(key).toHash().keys())
+            if(kKey=="file"){
+                QString filename = importTable.value(key).toHash().value(kKey).toString();
+                QJsonDocument importDoc = jsonOpenFile(filename);
+                parseStage1(importDoc.object());
+                importedFiles.append(filename);
+            }
 
     foreach(QString key,variablesTable.keys()){
         foreach(QString kKey, variablesTable.value(key).toHash().keys())
@@ -514,9 +526,9 @@ void JasonParser::resolveVariables(){
         foreach(QString key,substitutes.keys())
             if(!substitutes.value(key).contains("%")){
                 indicatorLocal++;
-            }/*else
-                qDebug() << "problem with" << key;*/
-        if(indicatorLocal==(substitutes.count()))
+            }else
+                updateProgressText(tr("Variable %s is being slightly problematic",qPrintable(key)));
+        if(indicatorLocal==substitutes.count())
             indicator = 1;
     }
     return;

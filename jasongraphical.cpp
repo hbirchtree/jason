@@ -26,10 +26,11 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     jParse.setStartOpts(startDocument,actionId,desktopFile,jasonPath);
     connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
+    connect(&jParse,SIGNAL(failedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
 
     //Progress window
     connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
-    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
+//    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
     connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
     connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));

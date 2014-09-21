@@ -45,6 +45,7 @@ signals:
 
     //Related to the general look and workings
     void finishedProcessing();
+    void failedProcessing();
     void toggleCloseButton(bool);
     void updateProgressText(QString);
     void updateProgressTitle(QString);
@@ -61,8 +62,11 @@ signals:
 
 private:
     //General
-    int jsonParse(QJsonDocument jDoc,int level);
     QHash<QString, QString> startOpts;
+    int jsonParse(QJsonDocument jDoc);
+    //Sections of parsing process
+    int parseStage1(QJsonObject mainObject);
+    int parseStage2(QJsonObject mainObject);
 
     //JSON
     QJsonDocument jsonOpenFile(QString filename);
