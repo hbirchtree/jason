@@ -25,6 +25,7 @@ public:
 private:
     QProgressDialog *progressWindow;
     QMessageBox *messageBox;
+    QMessageBox *detachedProgramNotify;
     QPushButton *closeProgressWindowBtn;
     QThread *workerThread;
 signals:
@@ -39,6 +40,7 @@ public slots:
     void detachedMessage(QString title);
     void showOutput(QString stdOut,QString stdErr);
     void printMessage(QString message);
+    void detachedProgramNotifyEmit(int retInt);
 };
 
 #endif // JASONGRAPHICAL_H

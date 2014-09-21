@@ -52,6 +52,7 @@ signals:
     void broadcastMessage(int,QString);
     void toggleProgressVisible(bool);
     void displayDetachedMessage(QString);
+    void changeProgressWIcon(QString);
 
     //Related to processes
     void mainProcessStart();
@@ -67,6 +68,7 @@ private:
     //Sections of parsing process
     int parseStage1(QJsonObject mainObject);
     int parseStage2(QJsonObject mainObject);
+    void stage2ActiveOptionAdd(QJsonValue instanceValue,QString key);
 
     //JSON
     QJsonDocument jsonOpenFile(QString filename);

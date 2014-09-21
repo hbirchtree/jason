@@ -13,7 +13,6 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     closeProgressWindowBtn->setText(tr("Close"));
     closeProgressWindowBtn->setDisabled(true);
     progressWindow->setCancelButton(closeProgressWindowBtn);
-//    progressWindow->setCancelButtonText(tr("Close"));
     progressWindow->setMinimum(0);
     progressWindow->setMaximum(0);
     progressWindow->setFixedHeight(80);
@@ -30,10 +29,10 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
     //Progress window
     connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
-//    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
+    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
-    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
     connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));
+    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
 
     //Displaying messages and etc
     connect(&jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
@@ -45,7 +44,6 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
     workerThread->start();
     progressWindow->show();
-
     /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
      * This is likely the fix to that problem.
     */
@@ -53,21 +51,30 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 }
 
 void JasonGraphical::showMessage(int status, QString message){
-    QMessageBox *messageBox = new QMessageBox;
+    QMessageBox *messageBox = new QMessageBox(this);
 //    return;
+    messageBox->setText(message);
     if(status==0)
-        messageBox->information(this,tr("Jason information"),message);
+        messageBox->setWindowTitle(tr("Jason information"));
     if(status==1)
-        messageBox->warning(this,tr("Jason warning"),message);
+        messageBox->setWindowTitle(tr("Jason warning"));
     if(status==2)
-        messageBox->warning(this,tr("Jason error"),message);
+        messageBox->setWindowTitle(tr("Jason error"));
+    messageBox->show();
 }
 
 void JasonGraphical::detachedMessage(QString title){
-    QMessageBox detachedProgramNotify;
+    QMessageBox *detachedProgramNotify = new QMessageBox(this);
     QString windowTitle = tr("Jason - Detached process");
     QString text = title+tr(" is currently detached. Close this window to notify Jason when it has been closed properly.");
-    detachedProgramNotify.information(this,windowTitle,text,tr("It is closed"));
+    detachedProgramNotify->setText(text);
+    detachedProgramNotify->setWindowTitle(windowTitle);
+    detachedProgramNotify->setButtonText(0,tr("It is closed"));
+    connect(detachedProgramNotify,SIGNAL(finished(int)),this,SLOT(detachedProgramNotifyEmit(int)));
+    detachedProgramNotify->show();
+}
+
+void JasonGraphical::detachedProgramNotifyEmit(int retInt){
     emit detachedHasClosed();
 }
 
@@ -82,7 +89,7 @@ void JasonGraphical::showOutput(QString stdOut, QString stdErr){
     outputLayout.addWidget(&outEdit,1,1);
     outputLayout.addWidget(&errEdit,1,2);
     outputWindow.setLayout(&outputLayout);
-    outputWindow.exec();
+    outputWindow.show();
 }
 
 void JasonGraphical::printMessage(QString message){

@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QApplication::setApplicationName("Jason");
-    QApplication::setApplicationVersion("0.9");
+    QApplication::setApplicationVersion("1.0");
 
     //Parse the command line
     QCommandLineParser cParse;

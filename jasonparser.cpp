@@ -9,12 +9,12 @@ JasonParser::~JasonParser(){
 }
 
 void JasonParser::testEnvironment(){
-//    qDebug() << substitutes;
+    qDebug() << "substitutes:" << substitutes;
 //    qDebug() << subsystems;
 //    qDebug() << systemTable;
-//    qDebug() << activeOptions;
-//    qDebug() << procEnv.toStringList();
-//    qDebug() << runtimeValues.value("launchables");
+    qDebug() << "activeOptions:" << activeOptions;
+    qDebug() << "procEnv:" << procEnv.toStringList();
+    qDebug() << "launchables:" << runtimeValues.value("launchables");
     foreach(QString var,procEnv.toStringList()){
         if(var.contains("%"))
             qDebug() << "unresolved variable?" << var.split("=")[1];
@@ -141,6 +141,27 @@ int JasonParser::parseStage1(QJsonObject mainObject){
     return 0;
 }
 
+void JasonParser::stage2ActiveOptionAdd(QJsonValue instance,QString key){
+    if(!instance.isNull()){
+        QString insertKey = key;
+        int insertInt = 0;
+        while(activeOptions.contains(insertKey)){
+            insertInt++;
+            insertKey = key+"."+QString::number(insertInt);
+        }
+        if(instance.isString())
+            activeOptions.insert(insertKey,instance.toString());
+        if(instance.isObject())
+            activeOptions.insert(insertKey,instance.toObject());
+        if(instance.isDouble())
+            activeOptions.insert(insertKey,instance.toDouble());
+        if(instance.isArray())
+            activeOptions.insert(insertKey,instance.toArray());
+        if(instance.isBool())
+            activeOptions.insert(insertKey,instance.toBool());
+    }
+}
+
 int JasonParser::parseStage2(QJsonObject mainObject){
     /*
      * Stage 2:
@@ -157,32 +178,11 @@ int JasonParser::parseStage2(QJsonObject mainObject){
         foreach(QString systemKey,systemTable.keys()){
             QString configPrefix = systemTable.value(systemKey).toHash().value("config-prefix").toString();
             if((key.startsWith(configPrefix+"."))&&(!instanceValue.isUndefined())){
-                if(!instanceValue.isNull()){
-                    QString insertKey = key;
-                    int insertInt = 0;
-                    while(activeOptions.contains(insertKey)){
-                        insertInt++;
-                        insertKey = key+"."+QString::number(insertInt);
-                    }
-                    activeOptions.insert(insertKey,instanceValue.toString());
-                }
-                if(instanceValue.isObject())
-                    activeOptions.insert(key,instanceValue.toObject());
-                if(instanceValue.isDouble())
-                    activeOptions.insert(key,instanceValue.toDouble());
-                if(instanceValue.isArray())
-                    activeOptions.insert(key,instanceValue.toArray());
-                if(instanceValue.isBool())
-                    activeOptions.insert(key,instanceValue.toBool());
+                stage2ActiveOptionAdd(instanceValue,key);
             }
         }
         if(key.startsWith("global.")){
-            if(instanceValue.isString())
-                activeOptions.insert(key,instanceValue.toString());
-            if(instanceValue.isBool())
-                activeOptions.insert(key,instanceValue.toBool());
-            if(instanceValue.isDouble())
-                activeOptions.insert(key,instanceValue.toDouble());
+            stage2ActiveOptionAdd(instanceValue,key);
         }
         if(key=="launchtype")
             activeOptions.insert(key,instanceValue.toString());
@@ -212,8 +212,9 @@ int JasonParser::jsonParse(QJsonDocument jDoc){ //level is used to identify the 
 
     updateProgressText(tr("Gathering active options"));
     parseStage2(mainTree);
-    foreach(QString import,importedFiles)
+    foreach(QString import,importedFiles){
         parseStage2(jsonOpenFile(import).object());
+    }
 
 /*
  * Stage 3:
@@ -271,10 +272,12 @@ int JasonParser::jsonParse(QJsonDocument jDoc){ //level is used to identify the 
         QVariant instanceValue = activeOptions.value(key);
         foreach(QString system,activeSystems)
             if(key.startsWith(systemTable.value(system).toHash().value("config-prefix").toString())){ //I puked all over my keyboard while writing this.
-                if(key.endsWith(".prerun"))
+                if(key.contains(".prerun")){
                     insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),0);
-                if(key.endsWith(".postrun"))
+                }
+                if(key.contains(".postrun")){
                     insertPrerunPostrun(jsonExamineArray(instanceValue.toJsonArray()),1);
+                }
             }
     }
     return 0;
@@ -459,7 +462,7 @@ void JasonParser::variablesImport(QHash<QString,QVariant> variables){
         }else if(varHash.value("name").isValid()&&varHash.value("value").isValid()){
             setEnvVar(varHash.value("name").toString(),resolveVariable(varHash.value("value").toString()));
         }else
-            qDebug() << "unsupported variable type" << varType;
+            broadcastMessage(1,"unsupported variable type"+varType);
     }
 }
 
@@ -808,14 +811,13 @@ void JasonParser::environmentActivate(QHash<QString,QVariant> environmentHash,QS
                         addToRuntime("run-suffix",runtimeReturnHash);
                     }
     }else if(type=="variable"){
-//        qDebug() << environmentHash;
         foreach(QString key,environmentHash.keys()){
             if(key=="name")
                 if(environmentHash.keys().contains("value"))
                     setEnvVar(environmentHash.value(key).toString(),resolveVariable(environmentHash.value("value").toString()));
         }
     }else{
-        qDebug() << "unsupported environment type" << type;
+        broadcastMessage(1,"unsupported environment type"+type);
         return;
     }
     return;
@@ -1014,6 +1016,16 @@ int JasonParser::runProcesses(QString launchId){
         runsuffixStr.append(" "+runSuffix.at(i).toHash().value("command").toString());
     }
 
+    bool doHideUi = false;
+    foreach(QString opt,activeOptions.keys())
+        if(opt=="global.jason-opts"){
+            QJsonObject jasonOpts = activeOptions.value(opt).toJsonObject();
+            foreach(QString key,jasonOpts.keys())
+                if(key.startsWith("jason.")){
+                        if((key.endsWith(".hide-ui-on-run"))&&(jasonOpts.value(key).isBool()))
+                            doHideUi = jasonOpts.value(key).toBool();
+                }
+        }
     doPrerun();
 
     //This is where the magic happens.
@@ -1046,15 +1058,17 @@ int JasonParser::runProcesses(QString launchId){
             }
             desktopTitle=name;
             updateProgressTitle(name);
-//            toggleProgressVisible(false);
+            if((doHideUi))
+                toggleProgressVisible(false);
             connect(this,SIGNAL(mainProcessEnd()),SLOT(doPostrun()));
             if(!argument.isEmpty())
                 executeProcess(argument,program,workDir,name,runprefixStr,runsuffixStr);
-//            toggleProgressVisible(true);
+            if((doHideUi))
+                toggleProgressVisible(true);
         }
     //Aaaand it's gone.
 
-    if(isDetach){
+    if((isDetach)){
         emit displayDetachedMessage(desktopTitle);
     }else
         emit mainProcessEnd();
