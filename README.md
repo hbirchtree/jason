@@ -6,9 +6,10 @@ It is written using Qt and its QJson libraries along with QProcess to actually l
 
 Far off in the distance:
  - A GUI for making Jason-compatible JSON files?
+ - Fixing up the subsystem types to actually be logical
 
 Planned features or things to do:
- - Nothing. I'm done with this for now.
+ - Solidifying the program by using it and fixing flaws I encounter through that process.
 
 
 Finished features:
