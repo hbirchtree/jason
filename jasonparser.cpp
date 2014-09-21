@@ -1206,7 +1206,7 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     updateProgressText(title);
 
     executer->start();
-    executer->waitForFinished();
+    executer->waitForFinished(-1);
     if((executer->exitCode()!=0)||(executer->exitStatus()!=0)){
         QString stdOut,stdErr,argumentString;
         stdOut = executer->readAllStandardOutput();
