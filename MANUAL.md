@@ -2,15 +2,10 @@
 
  - What is all this?
  Jason consists of JSON structures representing different features in a launch process. The general jist of it is:
-systems: they execute the different kinds of programs you want to launch. This definition is quite loose, as the 'program' may just as well be a file that can be used with a program, such as a Python script or something similar.
-subsystems:
-    either constant or taking input from a variable, these allow runtime prefixes/suffixes for the main launch program, such as 'glxosd' and similar programs that add to the process, preruns or postruns which run before or after the main program. There are different types of subsystems which work differently.
-    all subsystems except those of type constant have a value called "subsystems.enabler" where enabler is determined by the subsystem's variable "enabler".
-variables: used to substitute variables, denoted by %VARIABLE%
-environment: adds environment variables to the global process environment or runtime prefixes/suffixes
-shell.properties: contains shell and command.argument which dictate which shell is used. Common for all of these is that '--' is appended to signalize the end of arguments for the shell. This may be changed in the future.
-*.prerun and *.postrun: Programs that are to be run before and after the main process.
-imports: Loading more files and importing settings and objects from them.
+ - Take all these objects described by JSON structures
+ - Look at them and see what the user wants to do with them, example "sys.exec": "gltron"
+ - Run it, doing everything the user has described.
+It is designed to be flexible and handy to manage a large amount of programs you may want to launch, while presenting a "simple" way of allowing them to launch with advanced options.
 
  - Heres a much more in-depth explanation of each feature
 *.exec: an execution value. has to be prefixed with a system and is used to execute programs.
