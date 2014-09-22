@@ -9,6 +9,7 @@ subsystems:
 variables: used to substitute variables, denoted by %VARIABLE%
 environment: adds environment variables to the global process environment or runtime prefixes/suffixes
 shell.properties: contains shell and command.argument which dictate which shell is used. Common for all of these is that '--' is appended to signalize the end of arguments for the shell. This may be changed in the future.
+    import-env-variables: comma-separated list of variables to import from the environment, you typically want HOME, PATH and XDG_DATA_DIRS here, customize this to your needs.
 *.prerun and *.postrun: Programs that are to be run before and after the main process.
 imports: Loading more files and importing settings and objects from them.
 

@@ -511,7 +511,11 @@ int JasonParser::parseUnderlyingObjects(QHash<QString, QHash<QString, QVariant> 
 void JasonParser::resolveVariables(){
     QStringList systemVariables;
     //System variables that are used in substitution for internal variables. Messy indeed, but it kind of works in a simple way.
-    systemVariables<<"HOME"<<"PATH"<<"XDG_DATA_DIRS";
+    foreach(QString opt, activeOptions.keys())
+        if(opt.startsWith("shell.properties"))
+            foreach(QString key, activeOptions.value(opt).toJsonObject().keys())
+                if(key=="import-env-variables")
+                    systemVariables=activeOptions.value(opt).toJsonObject().value(key).toString().split(",");
     foreach(QString variable, systemVariables){
         QProcessEnvironment variableValue = QProcessEnvironment::systemEnvironment();
         substitutes.insert(variable,variableValue.value(variable));
