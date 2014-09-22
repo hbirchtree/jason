@@ -11,10 +11,10 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
     QProgressDialog *progressWindow = new QProgressDialog(this);
     QPushButton *closeProgressWindowBtn = new QPushButton(this);
     closeProgressWindowBtn->setText(tr("Close"));
+    progressWindow->setWindowTitle(tr("Jason Launcher"));
     closeProgressWindowBtn->setDisabled(true);
     progressWindow->setCancelButton(closeProgressWindowBtn);
-    progressWindow->setMinimum(0);
-    progressWindow->setMaximum(0);
+    progressWindow->setRange(0,0);
     progressWindow->setFixedHeight(80);
     progressWindow->setFixedWidth(450);
 
@@ -29,10 +29,13 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
     //Progress window
     connect(&jParse,SIGNAL(updateProgressText(QString)),progressWindow,SLOT(setLabelText(QString)));
-    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString)));
+    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString))); //Print messages directed for the GUI to stdout, so that we may read them even if the GUI swishes by.
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),progressWindow,SLOT(setWindowTitle(QString)));
     connect(&jParse,SIGNAL(finishedProcessing()),progressWindow,SLOT(close()));
+    connect(&jParse,SIGNAL(toggleCloseButton(bool)),closeProgressWindowBtn,SLOT(setEnabled(bool)));
     connect(&jParse,SIGNAL(toggleProgressVisible(bool)),progressWindow,SLOT(setVisible(bool)));
+    connect(&jParse,SIGNAL(changeProgressBarRange(int,int)),progressWindow,SLOT(setRange(int,int)));
+    connect(&jParse,SIGNAL(changeProgressBarValue(int)),progressWindow,SLOT(setValue(int)));
 
     //Displaying messages and etc
     connect(&jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
@@ -42,8 +45,9 @@ void JasonGraphical::startParse(QString startDocument, QString actionId, QString
 
     QEventLoop waitingLoop;
     connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
-    workerThread->start();
+    connect(closeProgressWindowBtn,SIGNAL(clicked()),&waitingLoop,SLOT(quit()));
     progressWindow->show();
+    workerThread->start();
     /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
      * This is likely the fix to that problem.
     */

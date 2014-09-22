@@ -30,6 +30,10 @@ global.*: a place where different values are thrown in order to be used by any s
 
 launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
 
+shell.properties: an object containing information related to the shell.
+    shell: string containing the name of the shell binary, example "sh", "bash" or "zsh".
+    command.argument: the argument given to the shell in order for it to run commands. in the case of sh this is "-c". after this a string "--" is appended to stop all arguments to the shell, making it only run the command which is appended afterwards.
+    import-env-variables: a comma-separated list of environment variables to include in the substitutes dictionary.
 
 imports:
     an array containing objects with a value "file" containing a string.
@@ -52,7 +56,7 @@ subsystems:
     have a variable "type" that specifies its behavior.
     have an object "appearance" which containing strings "desktop.title" and "desktop.icon" which determine the title of the operation displayed the GUI as well as an icon (if the icon is ever given a purpose)
     enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
-    types:
+    types: (specified in "type" key)
 		constant: all its values are applied on every run, regardless of any options.
 		bool: toggled by a boolean value. is not processed if the boolean value is false.
 			environment: typical environment.
@@ -66,13 +70,14 @@ subsystems:
 				id: identifier, used in input variable
 				environment: typical environment
 			input variable may be a comma-separated list
-		select: (THIS TYPE IS A MESS AND NEEDS TO BE CLEANED UP)
-			selections: array with selectable items, only one may be chosen by the input value.
-				variables:
-					both "name" and "value" are variables (this may be cleaned up in the future to be less confusing)
-				listname: the identifier used in the input value
-			*.exec: executes, may contain %VARIABLE% and %VALUE% to allow executing operations on key-value sets. creates several items for multiple variable sets. (ex. if the selection contains an array of variables)
-			trigger: is used to determine when it is to be run. (sys-prerun or sys-postrun, default is sys-prerun)
+                select:
+                        subtypes: (specified in "subtype" key)
+                            key-value-set:
+                                *.exec: two variables are substituted, a key and value, for use with operations that involve this.
+                                trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
+                                sets: an array with objects.
+                                    id: the string of this value is used to select it.
+                                    keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
 
 environment:
 	types:

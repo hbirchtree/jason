@@ -44,7 +44,7 @@ void JasonParser::startParse(){
 
     if(desktopFile.isEmpty()){
         if(runProcesses(actionId)!=0){
-            updateProgressText(tr("Error occured"));
+            updateProgressText(tr("Error occured while trying to launch"));
             broadcastMessage(2,tr("Shit.\n"));
             emit toggleCloseButton(true);
             emit failedProcessing();
@@ -55,7 +55,7 @@ void JasonParser::startParse(){
         generateDesktopFile(desktopFile,jasonPath,startDocument);
         updateProgressText(tr("Desktop file was generated successfully."));
     }
-    updateProgressText(tr("Nothing more to do."));
+    updateProgressText(tr("Nothing to do."));
     QEventLoop waitForEnd;
     connect(this,SIGNAL(finishedProcessing()),&waitForEnd,SLOT(quit()));
     waitForEnd.exec();
@@ -204,6 +204,10 @@ int JasonParser::jsonParse(QJsonDocument jDoc){ //level is used to identify the 
      *
 */
     QJsonObject mainTree = jDoc.object();
+    if((mainTree.isEmpty())||(jDoc.isEmpty())){
+        updateProgressText(tr("No objects found. Will not proceed."));
+        return 1;
+    }
     updateProgressText(tr("Gathering fundamental values"));
     if(parseStage1(mainTree)!=0){
         updateProgressText(tr("Failed to parse fundamental values. Will not proceed."));
@@ -248,8 +252,10 @@ int JasonParser::jsonParse(QJsonDocument jDoc){ //level is used to identify the 
 //                if(key=="config-prefix")
 //                    currSystemConfPrefix=currentSystem.value(key).toString();
             }
-            if(systemActivate(currentSystem,activeSystems)!=0)
+            if(systemActivate(currentSystem,activeSystems)!=0){
+                updateProgressText(tr("Failed to activate system. Will not proceed."));
                 return 1;
+            }
         }
     }
     updateProgressText(tr("Resolving variables"));
@@ -355,36 +361,34 @@ void JasonParser::setEnvVar(QString key, QString value) {
 
 
 void JasonParser::subsystemHandle(QHash<QString,QVariant> subsystemElement){
-    QString subType;
-    QString subEnabler;
-    QVector<QVariant> subEnv; //Environment container for environment held by subsystem
-    QHash<QString,QVariant> selections; //Selections for the select type
-    QHash<QString,QVariant> options; //Options for the option type
-    QStringList subAction; //The executable component
-    QString subVar; //The variable that this subsystem replaces
-    QString trigger; //When this subsystem will run if it has an executable component
-    QJsonObject appearance;
+    QHash<QString, QVariant> insertHash;
     //Identify and catch possible values for a subsystem
     foreach(QString key, subsystemElement.keys()){
         if(key=="type")
-            subType = subsystemElement.value(key).toString();
+            insertHash.insert("type",subsystemElement.value(key).toString());
         if(key=="enabler")
-            subEnabler = subsystemElement.value(key).toString();
-        if(key=="selections"){
+            insertHash.insert("enabler",subsystemElement.value(key).toString());
+        if(key=="sets"){
+            QHash<QString,QVariant> selections;
             QJsonArray selectArray = subsystemElement.value(key).toJsonArray();
             for(int i = 0;i<selectArray.count();i++){
                 QJsonObject selectObject = selectArray.at(i).toObject();
-                QString listname = selectObject.value("listname").toString();
+                QString listname = selectObject.value("id").toString();
                 selectObject.remove(listname);
                 selections.insert(listname,selectObject);
             }
+            insertHash.insert("sets",selections);
         }
-        if(key=="environment")
+        if(key=="environment"){
+            QVector<QVariant> subEnv; //Environment container for environment held by subsystem
             for(int i=0;i<subsystemElement.value(key).toJsonArray().count();i++){
                 QHash<QString,QVariant> envTable = jsonExamineObject(subsystemElement.value(key).toJsonArray().at(i).toObject());
                 subEnv.insert(subEnv.count(),envTable);
             }
+            insertHash.insert("environment",subEnv.toList());
+        }
         if(key=="options"){
+            QHash<QString, QVariant> options;
             QJsonArray optionArray = subsystemElement.value(key).toJsonArray();
             for(int i = 0;i<optionArray.count();i++){
                 QHash<QString,QVariant> optionObject = jsonExamineObject(optionArray.at(i).toObject());
@@ -392,47 +396,27 @@ void JasonParser::subsystemHandle(QHash<QString,QVariant> subsystemElement){
                 optionObject.remove(optName);
                 options.insert(optName,optionObject);
             }
-        }
-
-        if(key=="trigger")
-            trigger=subsystemElement.value(key).toString();
-        if(key=="appearance")
-            appearance=subsystemElement.value(key).toJsonObject();
-
-        if(key.endsWith(".exec")){ //Matches the config prefix
-            subAction.insert(0,subsystemElement.value(key).toString());
-            subAction.insert(1,key);
-        }
-        if(key=="variable")
-            subVar = subsystemElement.value(key).toString();
-    }
-    if(subType!="constant"){ //constants are always set, don't add it to the subsystems list
-        QHash<QString, QVariant> insertHash;
-        insertHash.insert("type",subType);
-        if(!subEnabler.isEmpty())
-            insertHash.insert("enabler",subEnabler);
-        if(!subAction.isEmpty())
-            insertHash.insert(subAction[1],subAction[0]);
-        if(!subVar.isEmpty())
-            insertHash.insert("variable",subVar);
-        if(!trigger.isEmpty())
-            insertHash.insert("trigger",trigger);
-        if(!subEnv.isEmpty())
-            insertHash.insert("environment",subEnv.toList());
-        if(!options.isEmpty())
             insertHash.insert("options",options);
-        if(!appearance.isEmpty())
-            insertHash.insert("appearance",appearance);
-        if(!selections.isEmpty())
-            insertHash.insert("selections",selections);
-        int i = subsystems.count();
-        subsystems.insert(i,insertHash);
-    } else
-        for(int i=0;i<subEnv.count();i++)
-            if(!subEnv.at(i).isNull()){
-                QString key = subEnv.at(i).toHash().value("name").toString();
-                setEnvVar(key,subEnv.at(i).toHash().value("value").toString());
+        }
+        if(key=="trigger")
+            insertHash.insert("trigger",subsystemElement.value(key).toString());
+        if(key=="appearance")
+            insertHash.insert("appearance",subsystemElement.value(key).toJsonObject());
+        if(key.endsWith(".exec")) //Matches the config prefix
+            insertHash.insert(key,subsystemElement.value(key).toString());
+        if(key=="variable")
+            insertHash.insert("variable",subsystemElement.value(key).toString());
+    }
+    if(insertHash.value("type").toString()!="constant"){ //constants are always set, don't add it to the subsystems list
+        subsystems.insert(subsystems.count(),insertHash);
+    }else
+        foreach(QString key,insertHash.keys()){
+            if(key=="environment"){
+                foreach(QString env,insertHash.value(key).toHash().keys())
+                    environmentActivate(insertHash.value(key).toHash().value(env).toHash(),systemTable.keys());
             }
+        }
+
     return;
 }
 
@@ -516,6 +500,8 @@ void JasonParser::resolveVariables(){
             foreach(QString key, activeOptions.value(opt).toJsonObject().keys())
                 if(key=="import-env-variables")
                     systemVariables=activeOptions.value(opt).toJsonObject().value(key).toString().split(",");
+    if(systemVariables.isEmpty())
+        broadcastMessage(1,tr("Note: No system variables were imported. This may be a bad sign.\n"));
     foreach(QString variable, systemVariables){
         QProcessEnvironment variableValue = QProcessEnvironment::systemEnvironment();
         substitutes.insert(variable,variableValue.value(variable));
@@ -534,7 +520,7 @@ void JasonParser::resolveVariables(){
             if(!substitutes.value(key).contains("%")){
                 indicatorLocal++;
             }else
-                updateProgressText(tr("Variable %s is being slightly problematic",qPrintable(key)));
+                updateProgressText(tr("Variable %1 is being slightly problematic.").arg(key));
         if(indicatorLocal==substitutes.count())
             indicator = 1;
     }
@@ -629,7 +615,6 @@ int JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
                 broadcastMessage(2,tr("No configuration prefix for the system was provided. Will not proceed."));
                 return 1;
             }
-
             systemHash.insert(key,systemElement.value(key).toString());
         }
         if(key=="launch-prefix") //prefix for command line, ex. "[prefix, ex. wine] test.exe"
@@ -641,7 +626,6 @@ int JasonParser::systemHandle(QHash<QString, QVariant> systemElement){
                 broadcastMessage(2,tr("No identifier for the system was provided. Will not proceed."));
                 return 1;
             }
-
             systemHash.insert(key,systemElement.value(key).toString());
         }
             systemHash.insert(key,systemElement.value(key).toString());
@@ -698,35 +682,53 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
         }
 
     if(type=="select"){
-        QString action;
+        /*
+         * Y'all need subtypes, goshdarnit!
+        */
+        QString launchPrefix,action,trigger;
+        trigger="sys-prerun";
         QJsonObject selection;
-        QString launchPrefix;
+        QString subtype = subsystemElement.value("subtype").toString();
+        /*
+         * subtypes:
+         *  - key-value-sets:
+         *          sets containing variables in which the name is used as key and value as variable.
+         *  - I'll add more as I see fit.
+         */
         foreach(QString key,subsystemElement.keys()){
-            if(key.endsWith(".exec")){
-                action = resolveVariable(subsystemElement.value(key).toString());
-                foreach(QString prefix,launchPrefixes)
-                    if(prefix.contains(key.split(".")[0]))
-                        launchPrefix=prefix.split("=")[1];
+            if(subtype=="key-value-set"){
+                if(key.endsWith(".exec")){
+                    action = resolveVariable(subsystemElement.value(key).toString());
+                    foreach(QString prefix,launchPrefixes)
+                        if(prefix.split("=")[0]==key.split(".")[0]) //Compare the config prefixes
+                            launchPrefix=prefix.split("=")[1];
+                }
+                if(key=="sets")
+                    selection = subsystemElement.value(key).toHash().value(option.toString()).toJsonObject(); //Out of all the sets, grab the one matching the selected one.
+                if(key=="trigger")
+                    trigger = subsystemElement.value(key).toString();
             }
-            if(key=="selections")
-                selection = subsystemElement.value(key).toHash().value(option.toString()).toJsonObject();
         }
         if(!action.isEmpty())
             foreach(QString key,selection.keys())
-                if(key=="variables"){
-                    QString trigger;
+                if(key=="keysets"){
                     QJsonArray selectedArray = selection.value(key).toArray();
                     for(int i=0;i<selectedArray.count();i++){
-                        QString actionCopy = action;
-                        QString variable = selectedArray.at(i).toObject().value("name").toString();
-                        QString value = selectedArray.at(i).toObject().value("value").toString();
-                        QString execLine = actionCopy.replace("%VARIABLE%",variable).replace("%VALUE%",value);
-                        if(trigger.isEmpty()){
-                            if(subsystemElement.value("trigger").isValid()){
-                                trigger=subsystemElement.value("trigger").toString();
-                            }else
-                                trigger="sys-prerun";
+                        QString actionCopy = action; //We copy the action so that the original is not altered by replacements
+                        QString keyName,keyValue,valueName,valueValue; //Silly indeed.
+                        QJsonObject keyset = selectedArray.at(i).toObject();
+                        foreach(QString thingy,keyset.keys()){
+                            if(thingy.startsWith("key.")){
+                                keyName=thingy.split(".")[1];
+                                keyValue=keyset.value(thingy).toString();
+                            }
+                            if(thingy.startsWith("value.")){
+                                valueName=thingy.split(".")[1];
+                                valueValue=keyset.value(thingy).toString();
+                            }
                         }
+
+                        QString execLine = actionCopy.replace(keyName,keyValue).replace(valueName,valueValue);
                         runtimeReturnHash.insert("launch-prefix",launchPrefix);
                         runtimeReturnHash.insert("command",execLine);
                         addToRuntime(trigger,runtimeReturnHash);
@@ -734,8 +736,8 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
                 }
     }
     if(type=="option"){
-        QStringList chosenOpts = option.toString().split(",");
-        QHash<QString,QVariant> possibleOpts = subsystemElement.value("options").toHash();
+        QStringList chosenOpts = option.toString().split(","); //Contains the options that are chosen
+        QHash<QString,QVariant> possibleOpts = subsystemElement.value("options").toHash(); //Contains all possible options that are defined
         foreach(QString opt,chosenOpts)
             foreach(QString pOpt,possibleOpts.keys())
                 if(pOpt==opt){
@@ -744,19 +746,25 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
                         if(key=="environment")
                             foreach(QString cKey,jsonExamineArray(currOpt.value(key).toJsonArray()).keys())
                                 environmentActivate(jsonExamineArray(currOpt.value(key).toJsonArray()).value(cKey).toHash(),activeSystems);
+                        if(key=="variables")
+                            variablesImport(jsonExamineArray(currOpt.value(key).toJsonArray()));
                     }
                 }
     }
-    if(type=="bool")
-            foreach(QString key,subsystemElement.keys())
+    if(type=="bool") //This is the prettiest type of them all. Sadly.
+            foreach(QString key,subsystemElement.keys()){
                 if(key=="environment")
                     environmentActivate(subsystemElement.value(key).toList().at(0).toHash(),activeSystems);
-    if(type=="substitution"){
+                if(key=="variables")
+                    variablesImport(subsystemElement.value(key).toList().at(0).toHash());
+            }
+    if(type=="substitution"){ //Needs cleanup
         QString launchPrefix;
         QString trigger;
         foreach(QString key,subsystemElement.keys()){
             if(key.endsWith(".exec"))
                 if(subsystemElement.keys().contains("variable")){
+                    //Because there is a .exec value we work on it and its command line.
                     foreach(QString prefix,launchPrefixes)
                         if(prefix.contains(key.split(".")[0]))
                             launchPrefix=prefix.split("=")[1]+" ";
@@ -775,8 +783,12 @@ void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, Q
                     }
                 }
             if(key=="environment"){
+                //Insert the string of the enabler into the substitute list, making this a global substitution. Is to be used for the environment below.
                 substitutes.insert(subsystemElement.value("variable").toString(),activeOptions.value("subsystem."+subsystemElement.value("enabler").toString()).toString());
                 environmentActivate(subsystemElement.value(key).toList()[0].toHash(),activeSystems);
+            }
+            if(key=="variables"){
+                variablesImport(subsystemElement.value(key).toList()[0].toHash());
             }
         }
     }
@@ -821,7 +833,7 @@ void JasonParser::environmentActivate(QHash<QString,QVariant> environmentHash,QS
                     setEnvVar(environmentHash.value(key).toString(),resolveVariable(environmentHash.value("value").toString()));
         }
     }else{
-        broadcastMessage(1,"unsupported environment type"+type);
+        broadcastMessage(1,tr("unsupported environment type").arg(type));
         return;
     }
     return;
@@ -1231,9 +1243,9 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
         stdErr = executer->readAllStandardError();
         foreach(QString arg,executer->arguments())
             argumentString.append(arg+" ");
-        stdOut.prepend(tr("Executed: ")+executer->program()+" "+argumentString+"\n");
-        stdOut.prepend(tr("Process returned value ")+QString::number(executer->exitCode())+"\n");
-        stdOut.prepend(tr("QProcess returned value ")+QString::number(executer->exitStatus())+"\n");
+        stdOut.prepend(tr("Executed: %1 %2\n").arg(executer->program()).arg(argumentString));
+        stdOut.prepend(tr("Process returned with status: %1.\n").arg(QString::number(executer->exitCode())));
+        stdOut.prepend(tr("QProcess returned with status: %1.\n").arg(QString::number(executer->exitStatus())));
         emit emitOutput(stdOut,stdErr);
     }
 }
@@ -1247,14 +1259,14 @@ void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
      * The QString is just the message it shows.
     */
     if(exitCode!=0)
-        broadcastMessage(1,tr("Process exited with status:")+" "+QString::number(exitCode)+".");
+        broadcastMessage(1,tr("Process exited with status: %1.\n").arg(QString::number(exitCode)));
     if(exitStatus!=0)
-        broadcastMessage(1,tr("QProcess exited with status:")+" "+QString::number(exitStatus)+".");
+        broadcastMessage(1,tr("QProcess exited with status: %1.\n").arg(QString::number(exitStatus)));
 }
 
 void JasonParser::processOutputError(QProcess::ProcessError processError){
-    broadcastMessage(2,tr("QProcess exited with status:")+" "+QString::number(processError));
-//    emit processFailed(processError);
+    broadcastMessage(2,tr("QProcess exited with status: %1.\n").arg(QString::number(processError)));
+    emit processFailed(processError);
 }
 
 void JasonParser::processStarted(){

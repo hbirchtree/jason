@@ -46,6 +46,7 @@ signals:
     //Related to the general look and workings
     void finishedProcessing();
     void failedProcessing();
+    //Directly about the GUI
     void toggleCloseButton(bool);
     void updateProgressText(QString);
     void updateProgressTitle(QString);
@@ -53,6 +54,8 @@ signals:
     void toggleProgressVisible(bool);
     void displayDetachedMessage(QString);
     void changeProgressWIcon(QString);
+    void changeProgressBarRange(int,int); //0,0 will make it indefinite, something else will make it normal.
+    void changeProgressBarValue(int);
 
     //Related to processes
     void mainProcessStart();
