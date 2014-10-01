@@ -100,7 +100,7 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + *.prerun and *.postrun must be the same type as the main system in order to run, they are otherwise not picked up. preruns and postruns are inherited.
 
  *   *.prerun/*.postrun: is an array of items that may be run before or after the main process
-	priority: an int, used to make an entry run before or after the others, 0 makes it run before the others in case of prerun, 1 makes it run after the others in case of postrun.
+     +   priority: an int, used to make an entry run before or after the others, 0 makes it run before the others in case of prerun, 1 makes it run after the others in case of postrun.
      + display.title: used in the GUI to display what is going on.
      + *.exec: the program to run, may be of any kind of system. (its launch-prefix is determined from the prefix of the variable name.)
      + *.workdir: where to run the program.
