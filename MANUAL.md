@@ -56,29 +56,29 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - desktop.icon
        - Are displayed when the subsystem is activated, icon currently holds no purpose but may have a purpose in the future.
      + enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
-    + Different types: (specified in the "type" key)
-      - constant: all its values are applied on every run, regardless of any options.
-      - bool: toggled by a boolean value. is not processed if the boolean value is false.
-      - environment: typical environment.
-      - substitution:
-        * trigger: when to run, sys-prerun or sys-postrun
-        * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
-        * *.exec: execute and substitute possible value inside the command with string from input variable.
-        * substitutes the variable specified by "variable" with the one supplied by the enabler. may substitute parts of an environment or .exec statement.
-      - option:
-        * options: array of objects containing the options
-        * id: identifier, used in input variable
-        * environment: typical environment
-        * input variable may be a comma-separated list
-      - select:
-        * subtype: specify the subtype
-        * Different subtypes: (specified in "subtype" key)
-          + key-value-set: (the values below are inserted at the same level as the subtype, which again is at the same level as the type, they are not nested.)
-            - *.exec: two variables are substituted, a key and value, for use with operations that involve this.
-            - trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
-            - sets: an array with objects.
-            - id: the string of this value is used to select it.
-            - keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
+     + Different types: (specified in the "type" key)
+       - constant: all its values are applied on every run, regardless of any options.
+       - bool: toggled by a boolean value. is not processed if the boolean value is false.
+       - environment: typical environment.
+       - substitution:
+         * trigger: when to run, sys-prerun or sys-postrun
+         * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
+         * *.exec: execute and substitute possible value inside the command with string from input variable.
+         * substitutes the variable specified by "variable" with the one supplied by the enabler. may substitute parts of an environment or .exec statement.
+       - option:
+         * options: array of objects containing the options
+         * id: identifier, used in input variable
+         * environment: typical environment
+         * input variable may be a comma-separated list
+       - select:
+         * subtype: specify the subtype
+         * Different subtypes: (specified in "subtype" key)
+           + key-value-set: (the values below are inserted at the same level as the subtype, which again is at the same level as the type, they are not nested.)
+             - *.exec: two variables are substituted, a key and value, for use with operations that involve this.
+             - trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
+             - sets: an array with objects.
+             - id: the string of this value is used to select it.
+             - keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
 
  *   environment:
      + Different types:
