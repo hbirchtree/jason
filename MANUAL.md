@@ -2,9 +2,9 @@
 
  * What is all this?
    + Jason consists of JSON structures representing different features in a launch process. The general jist of it is:
- * Take all these objects described by JSON structures
- * Look at them and see what the user wants to do with them, example "sys.exec": "gltron"
- * Run it, doing everything the user has described.
+     - Take all these objects described by JSON structures
+     - Look at them and see what the user wants to do with them, example "sys.exec": "gltron"
+     - Run it, doing everything the user has described.
 It is designed to be flexible and handy to manage a large amount of programs you may want to launch, while presenting a "simple" way of allowing them to launch with advanced options.
 
 ## Heres a much more in-depth explanation of each feature
