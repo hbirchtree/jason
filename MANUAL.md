@@ -7,12 +7,12 @@
  - Run it, doing everything the user has described.
 It is designed to be flexible and handy to manage a large amount of programs you may want to launch, while presenting a "simple" way of allowing them to launch with advanced options.
 
- - Heres a much more in-depth explanation of each feature
-*.exec: an execution value. has to be prefixed with a system and is used to execute programs.
+## Heres a much more in-depth explanation of each feature
+ *   *.exec: an execution value. has to be prefixed with a system and is used to execute programs.
 
-*.workdir: where to execute. Is paired with a *.exec value, will not be used unless there is a *.exec value.
+ *   *.workdir: where to execute. Is paired with a *.exec value, will not be used unless there is a *.exec value.
 
-desktop.file: contains entries used in the .desktop file generation process.
+ *   desktop.file: contains entries used in the .desktop file generation process.
     desktop.displayname: used in the Name= field as well as the GUI.
     desktop.description: used in the Comment= field (may fill in the Description= field as well?)
     desktop.wmclass: used in the StartupWMClass= field
@@ -23,23 +23,23 @@ desktop.file: contains entries used in the .desktop file generation process.
 	*.exec: the execution value of the action, is not inserted into the .desktop file.
 	*.workdir: the working directory for the execution of the action, not inserted into the .desktop file.
 
-global.*: a place where different values are thrown in order to be used by any system.
+ *   global.*: a place where different values are thrown in order to be used by any system.
     .detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
     .jason-opts: an object containing several options related to Jason:
         jason.hide-ui-on-run: boolean value, hides Jason's progress window when the main process starts.
 
-launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
+ *   launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
 
-shell.properties: an object containing information related to the shell.
+ *   shell.properties: an object containing information related to the shell.
     shell: string containing the name of the shell binary, example "sh", "bash" or "zsh".
     command.argument: the argument given to the shell in order for it to run commands. in the case of sh this is "-c". after this a string "--" is appended to stop all arguments to the shell, making it only run the command which is appended afterwards.
     import-env-variables: a comma-separated list of environment variables to include in the substitutes dictionary.
 
-imports:
+ *   imports:
     an array containing objects with a value "file" containing a string.
     encourages sharing values and objects to conserve space.
 
-variables:
+ *   variables:
     an array containing objects with values "name" and "value", all containing strings.
     used for substitution of variables in format %name%. Variables are substituted in most variables.
     have different types that work in different ways:
@@ -51,7 +51,7 @@ variables:
 	system: (future)
 	    pulls in an environment variable to the list of substitutes, only has value "name" containing the name of the environment variable.
 
-subsystems:
+ *   subsystems:
 	is an array filled with objects that are subsystems.
     have a variable "type" that specifies its behavior.
     have an object "appearance" which containing strings "desktop.title" and "desktop.icon" which determine the title of the operation displayed the GUI as well as an icon (if the icon is ever given a purpose)
@@ -79,7 +79,7 @@ subsystems:
                                     id: the string of this value is used to select it.
                                     keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
 
-environment:
+ *   environment:
 	types:
 		run-prefix: prefixed to the main execution command only
 			looks for "*.exec.prefix" and adds this to the list of prefixes. no prioritization is supported. no launch prefixes are applied.
@@ -87,7 +87,7 @@ environment:
 			same as run-prefix except it looks for "*.exec.suffix".
 		variable: normal variable, name and value, value has its variable resolved.
 
-systems:
+ *   systems:
     have a useless value "type" which does nothing, but is nice to have around.
     config-prefix: the prefix for every option related to the system, such as *.exec values. is required.
     launch-prefix: prefixed to the commands run by the system.
@@ -99,12 +99,12 @@ systems:
     	in the global scope there may only be one *.exec and *.workdir value, as there is no prioritization between imported files. having more will likely cause an error or unwanted behavior.
     	*.prerun and *.postrun must be the same type as the main system in order to run, they are otherwise not picked up.
 
-*.prerun/*.postrun: is an array of items that may be run before or after the main process
+ *   *.prerun/*.postrun: is an array of items that may be run before or after the main process
 	priority: an int, used to make an entry run before or after the others, 0 makes it run before the others in case of prerun, 1 makes it run after the others in case of postrun.
 	display.title: used in the GUI to display what is going on.
 	*.exec: the program to run, may be of any kind of system. (its launch-prefix is determined from the prefix of the variable name.)
 	*.workdir: where to run the program.
 
- - Variable substitution
+## Variable substitution
  Variables occur in the format %VARIABLE% and are substituted by the function resolveVariable(QString). The list of variables can be substituted internally by running resolveVariables(), which will loop through and resolve variables, making them pure strings.
 Because they result in strings, it is recommended to encapsulate strings that may contain spaces in *.exec values with single quotes. (Double quotes are used by JSON and may cause problems.)
