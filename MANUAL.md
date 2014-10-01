@@ -49,40 +49,43 @@ It is designed to be flexible and handy to manage a large amount of programs you
 	    pulls in an environment variable to the list of substitutes, only has value "name" containing the name of the environment variable.
 
  *   subsystems:
-	is an array filled with objects that are subsystems.
-    have a variable "type" that specifies its behavior.
-    have an object "appearance" which containing strings "desktop.title" and "desktop.icon" which determine the title of the operation displayed the GUI as well as an icon (if the icon is ever given a purpose)
-    enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
-    types: (specified in "type" key)
-		constant: all its values are applied on every run, regardless of any options.
-		bool: toggled by a boolean value. is not processed if the boolean value is false.
-			environment: typical environment.
-		substitution:
-			trigger: when to run, sys-prerun or sys-postrun
-			variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
-			*.exec: execute and substitute possible value inside the command with string from input variable.
-			substitutes the variable specified by "variable" with the one supplied by the enabler. may substitute parts of an environment or .exec statement.
-		option:
-			options: array of objects containing the options
-				id: identifier, used in input variable
-				environment: typical environment
-			input variable may be a comma-separated list
-                select:
-                        subtypes: (specified in "subtype" key)
-                            key-value-set:
-                                *.exec: two variables are substituted, a key and value, for use with operations that involve this.
-                                trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
-                                sets: an array with objects.
-                                    id: the string of this value is used to select it.
-                                    keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
+     + is an array filled with objects that are subsystems.
+     + type: specifies its behavior.
+     + appearance: an object containing:
+       - desktop.title
+       - desktop.icon
+       - Are displayed when the subsystem is activated, icon currently holds no purpose but may have a purpose in the future.
+     + enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
+    + Different types: (specified in the "type" key)
+      - constant: all its values are applied on every run, regardless of any options.
+      - bool: toggled by a boolean value. is not processed if the boolean value is false.
+      - environment: typical environment.
+      - substitution:
+        * trigger: when to run, sys-prerun or sys-postrun
+        * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
+        * *.exec: execute and substitute possible value inside the command with string from input variable.
+        * substitutes the variable specified by "variable" with the one supplied by the enabler. may substitute parts of an environment or .exec statement.
+      - option:
+        * options: array of objects containing the options
+        * id: identifier, used in input variable
+        * environment: typical environment
+        * input variable may be a comma-separated list
+      - select:
+        * subtype: specify the subtype
+        * Different subtypes: (specified in "subtype" key)
+          + key-value-set: (the values below are inserted at the same level as the subtype, which again is at the same level as the type, they are not nested.)
+            - *.exec: two variables are substituted, a key and value, for use with operations that involve this.
+            - trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
+            - sets: an array with objects.
+            - id: the string of this value is used to select it.
+            - keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
 
  *   environment:
-	types:
-		run-prefix: prefixed to the main execution command only
-			looks for "*.exec.prefix" and adds this to the list of prefixes. no prioritization is supported. no launch prefixes are applied.
-		run-suffix: suffixed to the main execution command only
-			same as run-prefix except it looks for "*.exec.suffix".
-		variable: normal variable, name and value, value has its variable resolved.
+     + Different types:
+       - run-prefix: prefixed to the main execution command only, looks for  a "*.exec.prefix" key and adds this to the list of prefixes. no prioritization is supported.
+     + run-suffix: suffixed to the main execution command only
+       - same as run-prefix except it looks for "*.exec.suffix".
+     + variable: normal variable, name and value, value has its variable resolved.
 
  *   systems:
      + in the global scope there may only be one *.exec and *.workdir value, as there is no prioritization between imported files. having more will be the same as dividing by zero.
