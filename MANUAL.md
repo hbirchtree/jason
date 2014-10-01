@@ -24,8 +24,8 @@ It is designed to be flexible and handy to manage a large amount of programs you
 	*.workdir: the working directory for the execution of the action, not inserted into the .desktop file.
 
  *   global.*: a place where different values are thrown in order to be used by any system.
-    .detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
-    .jason-opts: an object containing several options related to Jason:
+    + .detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
+    + .jason-opts: an object containing several options related to Jason:
         jason.hide-ui-on-run: boolean value, hides Jason's progress window when the main process starts.
 
  *   launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
