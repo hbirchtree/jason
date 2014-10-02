@@ -4,15 +4,17 @@ jason
 A quite advanced launcher using JSON to store information on how to start the program. It is the opposite of KISS.
 It is written using Qt and its QJson libraries along with QProcess to actually launch the program(s). Though it is aimed for Linux, it may work a little bit on Mac OS X and would most likely be equal to double-clicking a .exe file when run under Windows.
 
+Remember: You are personally responsible for whatever happens when using this program.
+
 Far off in the distance:
  - A GUI for making Jason-compatible JSON files?
- - Fixing up the subsystem types to actually be logical
 
 Planned features or things to do:
  - Solidifying the program by using it and fixing flaws I encounter through that process.
 
 
 Finished features:
+ - Fixing up the subsystem types to actually be logical (Well, I made it more clear how the key-value type works)
  - The GUI! It is quite simple, but it works in a satisfactory way, not taking up more space than it needs to.
  - A decent enough structure for JSON, still needs *some* more features as I have been writing the parser to cope with the example files which do not bring up every possible scenario, but the ground work is there.
  - Tons of configurability for launching. Really needs a manual on how it works, but until then I (the developer) would say it works decently for a wide enough amount of features, and it is pretty fast even though there are some bad programming choices inside it. (Hash tables. Too many of them.)
