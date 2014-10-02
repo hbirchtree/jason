@@ -53,9 +53,7 @@ void JasonParser::startParse(){
     }else{
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         generateDesktopFile(desktopFile,jasonPath,startDocument);
-        updateProgressText(tr("Desktop file was generated successfully."));
     }
-    updateProgressText(tr("Nothing to do."));
     QEventLoop waitForEnd;
     connect(this,SIGNAL(finishedProcessing()),&waitForEnd,SLOT(quit()));
     waitForEnd.exec();
@@ -1132,7 +1130,12 @@ void JasonParser::doPostrun(){
         }
     }
     emit toggleCloseButton(true);
-    emit finishedProcessing(); //When postrun is over, the program is one and so it is appropriate to call it here.
+    if(exitResult==0){
+        emit finishedProcessing(); //When postrun is over, the program is one and so it is appropriate to call it here.
+    }else{
+        updateProgressText(tr("Non-zero exit status was encountered."));
+        emit failedProcessing();
+    }
 }
 
 void JasonParser::doPrerun(){
@@ -1238,6 +1241,7 @@ void JasonParser::executeProcess(QString argument, QString program, QString work
     executer->start();
     executer->waitForFinished(-1);
     if((executer->exitCode()!=0)||(executer->exitStatus()!=0)){
+        qDebug() << "showing output";
         QString stdOut,stdErr,argumentString;
         stdOut = executer->readAllStandardOutput();
         stdErr = executer->readAllStandardError();
@@ -1258,6 +1262,8 @@ void JasonParser::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
      * where int is either 0, success, 1, warning, 2, error, or 3, disabled. (The last one exists because I am lazy.)
      * The QString is just the message it shows.
     */
+    exitResult+=exitCode;
+    exitResult+=exitStatus;
     if(exitCode!=0)
         broadcastMessage(1,tr("Process exited with status: %1.\n").arg(QString::number(exitCode)));
     if(exitStatus!=0)
@@ -1285,14 +1291,14 @@ void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QS
     outputDesktopFile.setFileName(desktopFile);
     if(outputDesktopFile.exists()){
         emit toggleCloseButton(true);
-        broadcastMessage(1,tr("Warning: The file exists. Will not proceed.\n"));
-        emit finishedProcessing();
+        updateProgressText(tr("The file exists. Will not proceed."));
+        emit failedProcessing();
         return;
     }
     if(!outputDesktopFile.open(QIODevice::WriteOnly | QIODevice::Text)){
         emit toggleCloseButton(true);
-        broadcastMessage(1,tr("Warning: Failed to open the output file for writing. Will not proceed."));
-        emit finishedProcessing();
+        updateProgressText(tr("Failed to open the output file for writing. Will not proceed."));
+        emit failedProcessing();
         return;
     }
     QString desktopActions;
@@ -1349,6 +1355,8 @@ void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QS
     outputDocument << outputContents;
     outputDesktopFile.setPermissions(QFile::ExeOwner|outputDesktopFile.permissions());
     outputDesktopFile.close();
+
+    updateProgressText(tr("Desktop file was generated successfully."));
 
     emit toggleCloseButton(true);
     emit finishedProcessing();

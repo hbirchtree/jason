@@ -70,7 +70,7 @@ void JasonGraphical::showMessage(int status, QString message){
 void JasonGraphical::detachedMessage(QString title){
     QMessageBox *detachedProgramNotify = new QMessageBox(this);
     QString windowTitle = tr("Jason - Detached process");
-    QString text = title+tr(" is currently detached. Close this window to notify Jason when it has been closed properly.");
+    QString text = tr("%1 is currently detached. Close this window to notify Jason when it has been closed properly.").arg(title);
     detachedProgramNotify->setText(text);
     detachedProgramNotify->setWindowTitle(windowTitle);
     detachedProgramNotify->setButtonText(0,tr("It is closed"));
@@ -83,17 +83,18 @@ void JasonGraphical::detachedProgramNotifyEmit(int retInt){
 }
 
 void JasonGraphical::showOutput(QString stdOut, QString stdErr){
-    QDialog outputWindow(this);
-    QGridLayout outputLayout(this);
-    QTextEdit errEdit(this),outEdit(this);
-    errEdit.setReadOnly(true);
-    outEdit.setReadOnly(true);
-    errEdit.setText(stdErr);
-    outEdit.setText(stdOut);
-    outputLayout.addWidget(&outEdit,1,1);
-    outputLayout.addWidget(&errEdit,1,2);
-    outputWindow.setLayout(&outputLayout);
-    outputWindow.show();
+    QDialog *outputWindow = new QDialog(this);
+    QGridLayout *outputLayout = new QGridLayout(this);
+    QTextEdit *errEdit = new QTextEdit(this);
+    QTextEdit *outEdit = new QTextEdit(this);
+    errEdit->setReadOnly(true);
+    outEdit->setReadOnly(true);
+    errEdit->setText(stdErr);
+    outEdit->setText(stdOut);
+    outputLayout->addWidget(outEdit,1,1);
+    outputLayout->addWidget(errEdit,1,2);
+    outputWindow->setLayout(outputLayout);
+    outputWindow->show();
 }
 
 void JasonGraphical::printMessage(QString message){

@@ -30,6 +30,8 @@ public:
     void testEnvironment();
     void setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath);
 
+    int exitResult;
+
 public slots:
     void processStarted();
     void startParse();

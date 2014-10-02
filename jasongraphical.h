@@ -28,6 +28,10 @@ private:
     QMessageBox *detachedProgramNotify;
     QPushButton *closeProgressWindowBtn;
     QThread *workerThread;
+    QDialog *outputWindow;
+    QGridLayout *outputLayout;
+    QTextEdit *errEdit, *outEdit;
+
 signals:
     void updateLaunchProgress(QString);
     void closeWindow();
