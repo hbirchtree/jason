@@ -96,7 +96,6 @@ private:
     //Activate options
     int systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
     void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option,QStringList activeSystems);
-    QHash<QString,QVariant> createExecutionQueue(QString launchType);
     void environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems);
     void variablesImport(QHash<QString,QVariant> variables);
     void addToRuntime(QString role,QVariant input);
