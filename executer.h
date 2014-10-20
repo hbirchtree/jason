@@ -3,13 +3,17 @@
 
 #include <QThread>
 #include <QProcess>
+#include <QProcessEnvironment>
+#include <QList>
+#include <QVariant>
+#include <QHash>
 
 class Executer : public QThread
 {
     Q_OBJECT
 public:
     explicit Executer(QObject *parent = 0);
-    int initializeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus);
+    int initializeProcess(QString shell, QStringList arguments, QString workDir, QHash<QString,QVariant> procEnv, bool lazyExitStatus);
     int exec();
 
 private:
@@ -23,7 +27,7 @@ signals:
 
 public slots:
     void processFinished(int exitCode,QProcess::ExitStatus exitStatus);
-    void processStateChanged(QProcess::ProcessState);
+    void processStateChanged(QProcess::ProcessState pState);
 
 };
 

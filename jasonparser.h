@@ -37,9 +37,11 @@ public slots:
     void detachedMainProcessClosed();
 
 private slots:
-    void doPrerun();
-    void doPostrun();
+//    void doPrerun();
+//    void doPostrun();
     void receiveLogOutput(QString stdOut,QString stdErr);
+    void forwardProgressTextUpdate(QString message);
+    void forwardProgressValueUpdate(int value);
 
 signals:
     //Related to the general look and workings
@@ -64,35 +66,34 @@ signals:
 private:
     //General
     QHash<QString, QString> startOpts;
-    int jsonParse(QJsonDocument jDoc);
+//    int jsonParse(QJsonDocument jDoc);
     //Sections of parsing process
-    int parseStage1(QJsonObject mainObject);
-    int parseStage2(QJsonObject mainObject);
-    void stage2ActiveOptionAdd(QJsonValue instanceValue,QString key);
+//    int parseStage1(QJsonObject mainObject);
+//    int parseStage2(QJsonObject mainObject);
+////    void stage2ActiveOptionAdd(QJsonValue instanceValue,QString key);
 
     //JSON
-    QJsonDocument jsonOpenFile(QString filename);
-    QHash<QString,QVariant> jsonExamineArray(QJsonArray jArray);
-    QVariant jsonExamineValue(QJsonValue jValue);
-    QHash<QString,QVariant> jsonExamineObject(QJsonObject jObject);
+//    QJsonDocument jsonOpenFile(QString filename);
+//    QHash<QString,QVariant> jsonExamineArray(QJsonArray jArray);
+//    QVariant jsonExamineValue(QJsonValue jValue);
+//    QHash<QString,QVariant> jsonExamineObject(QJsonObject jObject);
 
     //Handlers
-    void subsystemHandle(QHash<QString,QVariant> subsystemElement);
-    void setEnvVar(QString key, QString value);
-    QProcessEnvironment procEnv;
-    void variableHandle(QString key, QString value);
-    void resolveVariables();
-    QString resolveVariable(QString variable);
+//    void subsystemHandle(QHash<QString,QVariant> subsystemElement);
+//    void setEnvVar(QString key, QString value);
+//    QProcessEnvironment procEnv;
+//    void variableHandle(QString key, QString value);
+//    void resolveVariables();
+//    QString resolveVariable(QString variable);
     int parseUnderlyingObjects(QHash<QString, QHash<QString,QVariant> > underlyingObjects);
     void desktopFileBuild(QJsonObject desktopObject);
-    void parseImportArray(QJsonArray imports);
-    int systemHandle(QHash<QString,QVariant> systemElement);
+//    int systemHandle(QHash<QString,QVariant> systemElement);
 
     //Activate options
     int systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems);
     void subsystemActivate(QHash<QString,QVariant> subsystemElement,QVariant option,QStringList activeSystems);
     void environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems);
-    void variablesImport(QHash<QString,QVariant> variables);
+//    void variablesImport(QHash<QString,QVariant> variables);
     void addToRuntime(QString role,QVariant input);
     void insertPrerunPostrun(QHash<QString,QVariant> runtable,int mode); //int mode is used to differentiate between post- and prerun tables, where prerun is 0 and postrun is 1. It's ugly.
 
@@ -103,12 +104,12 @@ private:
     QProcess *executer;
 
     //Hashes/arrays/vectors
-    QHash<QString, QString> substitutes;
-    QHash<int, QHash<QString,QVariant> > subsystems;
-    QHash<QString,QVariant> activeOptions;
-    QHash<QString,QVariant> systemTable;
-    QHash<QString,QVariant> runtimeValues;
-    QStringList importedFiles;
+//    QHash<QString, QString> substitutes;
+//    QHash<int, QHash<QString,QVariant> > subsystems;
+//    QHash<QString,QVariant> activeOptions;
+//    QHash<QString,QVariant> systemTable;
+//    QHash<QString,QVariant> runtimeValues;
+//    QStringList importedFiles;
 
 };
 
