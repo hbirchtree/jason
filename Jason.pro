@@ -14,10 +14,16 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     jasongraphical.cpp \
-    jasonparser.cpp
+    jasonparser.cpp \
+    jasongui.cpp \
+    executer.cpp \
+    jsonparser.cpp
 
 HEADERS  += jasonparser.h \
-    jasongraphical.h
+    jasongraphical.h \
+    jasongui.h \
+    executer.h \
+    jsonparser.h
 
 TRANSLATIONS += \
     jason-en.ts
@@ -26,3 +32,6 @@ OTHER_FILES += \
     jason-en.ts \
     MANUAL.md \
     README.md
+
+FORMS += \
+    jasongui.ui

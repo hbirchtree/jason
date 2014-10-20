@@ -33,18 +33,15 @@ public:
     int exitResult;
 
 public slots:
-    void processStarted();
     void startParse();
     void detachedMainProcessClosed();
 
 private slots:
-    void processOutputError(QProcess::ProcessError processError);
-    void processFinished(int exitCode,QProcess::ExitStatus exitStatus);
     void doPrerun();
     void doPostrun();
+    void receiveLogOutput(QString stdOut,QString stdErr);
 
 signals:
-
     //Related to the general look and workings
     void finishedProcessing();
     void failedProcessing();
@@ -52,6 +49,7 @@ signals:
     void toggleCloseButton(bool);
     void updateProgressText(QString);
     void updateProgressTitle(QString);
+    void updateProgressIcon(QString);
     void broadcastMessage(int,QString);
     void toggleProgressVisible(bool);
     void displayDetachedMessage(QString);
@@ -60,10 +58,7 @@ signals:
     void changeProgressBarValue(int);
 
     //Related to processes
-    void mainProcessStart();
-    void mainProcessEnd();
-    void processFailed(QProcess::ProcessError);
-    void processReturnOutput();
+    void detachedRunEnd();
     void emitOutput(QString,QString);
 
 private:
@@ -103,8 +98,8 @@ private:
 
     //Fucking finally
     int runProcesses(QString launchId);
-    void executeProcess(QString argument,QString program,QString workDir, QString title, QString runprefix, QString runsuffix);
     void generateDesktopFile(QString desktopFile,QString jasonPath, QString inputDoc);
+    int executeProcess(QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached);
     QProcess *executer;
 
     //Hashes/arrays/vectors

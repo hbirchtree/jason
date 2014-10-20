@@ -1,6 +1,6 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
-#include "jasongraphical.h"
+#include "jasongui.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
             desktopFile = cParse.value(option);
     }
 
-    JasonGraphical jasonGui;
-    jasonGui.startParse(filename,actionToLaunch,desktopFile,a.arguments()[0]);
+    JasonGui jasongui;
+    jasongui.startParse(filename,actionToLaunch,desktopFile,a.arguments()[0]);
 
     return 0;
 }
