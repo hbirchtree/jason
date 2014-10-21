@@ -31,7 +31,7 @@ QJsonDocument jsonparser::jsonOpenFile(QString filename){
     return jDoc;
 }
 
-int jsonparser::parseStage1(QJsonObject mainObject,QHash<QString,QVariant> *systemTable,QHash<QString,QVariant> *substitutes, QList<QVariant> *subsystems,QStringList *importedFiles, QHash<QString,QVariant> const &activeOptions){
+int jsonparser::parseStage1(QJsonObject mainObject,QHash<QString,QVariant> *systemTable,QHash<QString,QVariant> *substitutes, QList<QVariant> *subsystems,QStringList *importedFiles, QHash<QString,QVariant> *activeOptions,QHash<QString,QVariant> *procEnv){
     /*Stage 1: Parse information about systems, variables, subsystems
      *  - Systems are used to start programs in a specific way, example system launch
      *  versus WINE. They serve a .exec value that is used to launch their programs,
@@ -79,12 +79,20 @@ int jsonparser::parseStage1(QJsonObject mainObject,QHash<QString,QVariant> *syst
             if(!resultHash.isEmpty()){
                 if(resultHash.value("systems").isValid())
                     systemTable->unite(resultHash.value("systems").toHash());
+                if(resultHash.value("subsystems").isValid())
+                    subsystems->append(resultHash.value("subsystems").toList());
+                if(resultHash.value("activeopts").isValid())
+                    activeOptions->unite(resultHash.value("activeopts").toHash());
+                if(resultHash.value("variables").isValid())
+                    substitutes->unite(resultHash.value("variables").toHash());
+                if(resultHash.value("procenv").isValid())
+                    procEnv->unite(resultHash.value("procenv").toHash());
             }
         }
     }
     if(!mainObject.value("variables").isUndefined()){
         QList<QVariant> varRay = mainObject.value("variables").toArray().toVariantList();
-        variablesImport(varRay,substitutes,activeOptions);
+        variablesImport(varRay,substitutes,*activeOptions);
     }
     return 0;
 }
@@ -156,13 +164,10 @@ int jsonparser::jsonParse(QJsonDocument jDoc, QHash<QString, QVariant> *targetHa
     } //Yes, very odd, but we want to populate activeOptions before running stage 1.
 
     sendProgressTextUpdate(tr("Gathering fundamental values"));
-    if(parseStage1(mainTree,&systemTable,&substitutes,&subsystems,&importedFiles,activeOptions)!=0){
+    if(parseStage1(mainTree,&systemTable,&substitutes,&subsystems,&importedFiles,&activeOptions,&procEnv)!=0){
         sendProgressTextUpdate(tr("Failed to parse fundamental values. Will not proceed."));
         return 1;
     }
-
-
-    qDebug() << systemTable << substitutes << subsystems << importedFiles;
 
     targetHash->insert("systems",systemTable);
     targetHash->insert("variables",substitutes);

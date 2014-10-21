@@ -3,10 +3,6 @@
 
 #include "jasongraphical.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>

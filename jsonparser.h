@@ -25,7 +25,7 @@ public:
     int jsonParse(QJsonDocument jDoc,QHash<QString,QVariant> *targetHash);
 
 private:
-    int parseStage1(QJsonObject mainObject, QHash<QString,QVariant> *systemTable, QHash<QString, QVariant> *substitutes, QList<QVariant> *subsystems, QStringList *importedFiles, const QHash<QString, QVariant> &activeOptions);
+    int parseStage1(QJsonObject mainObject, QHash<QString,QVariant> *systemTable, QHash<QString, QVariant> *substitutes, QList<QVariant> *subsystems, QStringList *importedFiles, QHash<QString, QVariant> *activeOptions, QHash<QString, QVariant> *procEnv);
     void parseStage2(QJsonObject mainObject, const QHash<QString, QVariant> &systemTable, QHash<QString,QVariant> *activeOptions);
     int stage2ActiveOptionAdd(QHash<QString,QVariant> *activeOptions,QJsonValue instance,QString key);
 
