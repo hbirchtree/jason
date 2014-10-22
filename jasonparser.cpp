@@ -12,22 +12,7 @@ JasonParser::~JasonParser(){
 }
 
 void JasonParser::testEnvironment(){
-//    qDebug() << "substitutes:" << substitutes;
-//    qDebug() << subsystems;
-//    qDebug() << systemTable;
-//    qDebug() << "activeOptions:" << activeOptions;
-//    qDebug() << "procEnv:" << procEnv.toStringList();
-//    qDebug() << "launchables:" << runtimeValues.value("launchables");
-//    foreach(QString var,procEnv.toStringList()){
-//        if(var.contains("%"))
-//            qDebug() << "unresolved variable?" << var.split("=")[1];
-//        if(var.contains("//"))
-//            qDebug() << "unresolved variable?" << var.split("=")[1];
-//    }
-//    foreach(QString var,substitutes.keys()){
-//        if(substitutes.value(var).contains("%"))
-//            qDebug() << "unresolved variable?" << var << substitutes.value(var);
-//    }
+
 }
 
 void JasonParser::startParse(){
@@ -52,13 +37,16 @@ void JasonParser::startParse(){
         return;
     }
 
-    qDebug() << jsonFinalData.value("systems").toHash() << "\n\n" << jsonFinalData.value("subsystems").toList() << "\n\n" << jsonFinalData.value("activeopts").toHash();
+//    qDebug() << jsonFinalData.value("systems").toHash() << "\n\n" << jsonFinalData.value("subsystems").toList() << "\n\n" << jsonFinalData.value("activeopts").toHash();
 
     if(!desktopFile.isEmpty()){
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
-
+        desktoptools desktopfilegenerator;
+        QVariant object = jsonFinalData.value("activeopts").toHash().value("desktop.file");
+        if(object.isValid()&&object.type()==QVariant::Hash)
+            desktopfilegenerator.desktopFileBuild(object.toHash(),jsonFinalData.value("systems").toHash());
     } else {
-
+        parser.jasonActivateSystems(jsonFinalData);
     }
 
     emit finishedProcessing();
@@ -106,10 +94,9 @@ void JasonParser::setStartOpts(QString startDocument, QString actionId, QString 
     if(!jasonPath.isEmpty())
         startOpts.insert("jason-path",jasonPath);
     QFileInfo cw(startDocument);
-    startOpts.insert("working-directory",cw.canonicalPath());
+    startOpts.insert("working-directory",cw.absolutePath());
     return;
 }
-
 
 //void JasonParser::subsystemActivate(QHash<QString, QVariant> subsystemElement, QVariant option,QStringList activeSystems){
 //    QString type;
@@ -266,57 +253,13 @@ void JasonParser::setStartOpts(QString startDocument, QString actionId, QString 
 //}
 
 
-//void JasonParser::environmentActivate(QHash<QString,QVariant> environmentHash,QStringList activeSystems){
-//    QString type;
-//    QStringList activeSystemsConfig;
-//    foreach(QString system, activeSystems)
-//        activeSystemsConfig.append(systemTable.value(system).toHash().value("config-prefix").toString());
-//    //Get type in order to determine how to treat this environment entry
-//    foreach(QString key, environmentHash.keys()){
-//        if(key=="type")
-//            type = environmentHash.value(key).toString();
-//    }
-//    //Treat the different types according to their parameters and realize their properties
-//    if(type=="run-prefix"){
-//        foreach(QString key,environmentHash.keys())
-//            if(key.endsWith(".exec.prefix")) //Execution prefix, given that the system is active
-//                foreach(QString system,activeSystemsConfig)
-//                    if(key.split(".")[0]==system){
-//                        QString execLine = resolveVariable(environmentHash.value(key).toString());
-//                        QHash<QString,QVariant> runtimeReturnHash;
-//                        runtimeReturnHash.insert("command",resolveVariable(execLine));
-//                        addToRuntime("run-prefix",runtimeReturnHash);
-//                    }
-//    }else if(type=="run-suffix"){
-//        foreach(QString key,environmentHash.keys())
-//            if(key.endsWith(".exec.suffix")) //Execution prefix, given that the system is active
-//                foreach(QString system,activeSystemsConfig)
-//                    if(key.split(".")[0]==system){
-//                        QHash<QString,QVariant> runtimeReturnHash;
-//                        runtimeReturnHash.insert("command",resolveVariable(environmentHash.value(key).toString()));
-//                        addToRuntime("run-suffix",runtimeReturnHash);
-//                    }
-//    }else if(type=="variable"){
-//        foreach(QString key,environmentHash.keys()){
-//            if(key=="name")
-//                if(environmentHash.keys().contains("value"))
-//                    setEnvVar(environmentHash.value(key).toString(),resolveVariable(environmentHash.value("value").toString()));
-//        }
-//    }else{
-//        broadcastMessage(1,tr("unsupported environment type").arg(type));
-//        return;
-//    }
-//    return;
-//}
-
-
-//int JasonParser::systemActivate(QHash<QString,QVariant> systemElement,QStringList activeSystems){
-//    /*activeSystems contain the identifiers for the systems currently active, including the
-//     * system itself as well as any it may inherit. Inheritance allows the system to access
-//     * elements that the other system uses, such as .postrun and .prerun, but will not inherit
-//     * .workdir or .exec as these are directly related to the system.
-//     * Properties will be explicitly inherited in order to  avoid possible collisions.
-//    */
+//int JasonParser::systemActivate(QHash<QString,QVariant> *systemElement,QStringList *activeSystems){
+    /*activeSystems contain the identifiers for the systems currently active, including the
+     * system itself as well as any it may inherit. Inheritance allows the system to access
+     * elements that the other system uses, such as .postrun and .prerun, but will not inherit
+     * .workdir or .exec as these are directly related to the system.
+     * Properties will be explicitly inherited in order to  avoid possible collisions.
+    */
 //    QString configPrefix = systemElement.value("config-prefix").toString();
 //    substitutes.insert("CONFIG_PREFIX",configPrefix);
 //    QString sysIdentifier = systemElement.value("identifier").toString();

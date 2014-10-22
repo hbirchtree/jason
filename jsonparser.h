@@ -23,15 +23,19 @@ public:
     explicit jsonparser(QObject *parent = 0);
     QJsonDocument jsonOpenFile(QString filename);
     int jsonParse(QJsonDocument jDoc,QHash<QString,QVariant> *targetHash);
+    int jasonActivateSystems(QHash<QString,QVariant> const &jsonData);
 
 private:
+    //Stages
     int parseStage1(QJsonObject mainObject, QHash<QString,QVariant> *systemTable, QHash<QString, QVariant> *substitutes, QList<QVariant> *subsystems, QStringList *importedFiles, QHash<QString, QVariant> *activeOptions, QHash<QString, QVariant> *procEnv);
     void parseStage2(QJsonObject mainObject, const QHash<QString, QVariant> &systemTable, QHash<QString,QVariant> *activeOptions);
     int stage2ActiveOptionAdd(QHash<QString,QVariant> *activeOptions,QJsonValue instance,QString key);
 
+    //JSON
     QHash<QString,QVariant> jsonExamineObject(QJsonObject jObject);
     QList<QVariant> jsonExamineArray(QJsonArray jArray);
 
+    //Handlers
     int subsystemHandle(QHash<QString,QVariant> *subsystemElement);
     int systemHandle(QHash<QString, QVariant> *systemElement);
 
@@ -43,6 +47,10 @@ private:
 
     //Environment variables
     void setEnvVar(QHash<QString,QVariant> *procEnv, QString key, QString value);
+
+    //Activators
+    int systemActivate(QHash<QString,QVariant> *systemElement, QHash<QString, QVariant> *activeOptions, QStringList *activeSystems, QHash<QString, QVariant> *variables);
+    void environmentActivate(QHash<QString,QVariant> const &environmentHash,QStringList const &activeSystems);
 
 signals:
     void reportError(int errorLevel,QString message);

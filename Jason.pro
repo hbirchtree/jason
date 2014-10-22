@@ -17,13 +17,15 @@ SOURCES += main.cpp \
     jasonparser.cpp \
     jasongui.cpp \
     executer.cpp \
-    jsonparser.cpp
+    jsonparser.cpp \
+    desktoptools.cpp
 
 HEADERS  += jasonparser.h \
     jasongraphical.h \
     jasongui.h \
     executer.h \
-    jsonparser.h
+    jsonparser.h \
+    desktoptools.h
 
 TRANSLATIONS += \
     jason-en.ts
