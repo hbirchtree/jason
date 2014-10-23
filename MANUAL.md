@@ -20,6 +20,10 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - desktop.displayname: used in the Name= field as well as the GUI if the action is launched
        - *.exec: the execution value of the action, is not inserted into the .desktop file.
        - *.workdir: the working directory for the execution of the action, not inserted into the .desktop file.
+     + Adding other entries into the .desktop file:
+       - A "desktop.raw" object containing keys named after the Desktop spec names, for instance "MimeType","Terminal" and etc
+       - The value will be a string that is directly inserted into the file
+       - Due to the nature of Jason, you will be able to share options between these, creating a "desktop.file" object in an imported file.
 
  *   global.*: a place where different values are thrown in order to be used by any system.
     + .detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
@@ -56,10 +60,10 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - desktop.icon
        - Are displayed when the subsystem is activated, icon currently holds no purpose but may have a purpose in the future.
      + enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
+     + environment: typical environment, enabled when the subsystem is enabled.
+     + variables: typical, enabled when the subsystem is enabled.
      + Different types: (specified in the "type" key)
-       - constant: all its values are applied on every run, regardless of any options.
        - bool: toggled by a boolean value. is not processed if the boolean value is false.
-       - environment: typical environment.
        - substitution:
          * trigger: when to run, sys-prerun or sys-postrun
          * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.

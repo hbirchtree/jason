@@ -23,7 +23,7 @@ public:
     explicit jsonparser(QObject *parent = 0);
     QJsonDocument jsonOpenFile(QString filename);
     int jsonParse(QJsonDocument jDoc,QHash<QString,QVariant> *targetHash);
-    int jasonActivateSystems(QHash<QString,QVariant> const &jsonData);
+    int jasonActivateSystems(QHash<QString,QVariant> const &jsonData, QHash<QString, QVariant> *runtimeValues);
 
 private:
     //Stages
@@ -41,7 +41,7 @@ private:
 
     //Variables
     void resolveVariables(QHash<QString,QVariant> *substitutes);
-    QString resolveVariable(QHash<QString,QVariant> *substitutes, QString variable);
+    QString resolveVariable(const QHash<QString, QVariant> &substitutes, QString variable);
     void variableHandle(QHash<QString,QVariant> *variables, QString key, QString value);
     void variablesImport(QList<QVariant> inputVariables, QHash<QString,QVariant> *substitutes, QHash<QString,QVariant> const &activeOptions);
 
@@ -49,8 +49,10 @@ private:
     void setEnvVar(QHash<QString,QVariant> *procEnv, QString key, QString value);
 
     //Activators
-    int systemActivate(QHash<QString,QVariant> *systemElement, QHash<QString, QVariant> *activeOptions, QStringList *activeSystems, QHash<QString, QVariant> *variables);
-    void environmentActivate(QHash<QString,QVariant> const &environmentHash,QStringList const &activeSystems);
+    int systemActivate(const QHash<QString, QVariant> &systemElement, QHash<QString, QVariant> *activeOptions, QStringList *activeSystems, QHash<QString, QVariant> *variables, QHash<QString, QVariant> *procEnv, QHash<QString, QVariant> *runtimeValues);
+    int systemInherit(const QHash<QString, QVariant> &systemElement, QHash<QString,QVariant> *activeOptions, QStringList *activeSystems, QHash<QString,QVariant> *variables, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *runtimeValues);
+    void environmentActivate(QHash<QString,QVariant> const &environmentHash, QHash<QString, QVariant> *procEnv, QHash<QString, QVariant> *runtimeValues,QHash<QString,QVariant> const &variables);
+    int subsystemActivate(QHash<QString,QVariant> *subsystemElement, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *variables, QHash<QString,QVariant> *runtimeValues, QHash<QString,QVariant> *activeOptions);
 
 signals:
     void reportError(int errorLevel,QString message);

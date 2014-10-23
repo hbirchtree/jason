@@ -39,6 +39,7 @@ void JasonParser::startParse(){
 
 //    qDebug() << jsonFinalData.value("systems").toHash() << "\n\n" << jsonFinalData.value("subsystems").toList() << "\n\n" << jsonFinalData.value("activeopts").toHash();
 
+    QHash<QString,QVariant> runtimeValues;
     if(!desktopFile.isEmpty()){
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         desktoptools desktopfilegenerator;
@@ -46,7 +47,7 @@ void JasonParser::startParse(){
         if(object.isValid()&&object.type()==QVariant::Hash)
             desktopfilegenerator.desktopFileBuild(object.toHash(),jsonFinalData.value("systems").toHash());
     } else {
-        parser.jasonActivateSystems(jsonFinalData);
+        parser.jasonActivateSystems(jsonFinalData,&runtimeValues);
     }
 
     emit finishedProcessing();
