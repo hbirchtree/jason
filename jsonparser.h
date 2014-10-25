@@ -28,7 +28,7 @@ public:
 private:
     //Stages
     int parseStage1(QJsonObject mainObject, QHash<QString,QVariant> *systemTable, QHash<QString, QVariant> *substitutes, QList<QVariant> *subsystems, QStringList *importedFiles, QHash<QString, QVariant> *activeOptions, QHash<QString, QVariant> *procEnv);
-    void parseStage2(QJsonObject mainObject, const QHash<QString, QVariant> &systemTable, QHash<QString,QVariant> *activeOptions);
+    void parseStage2(QJsonObject mainObject, QHash<QString,QVariant> *activeOptions);
     int stage2ActiveOptionAdd(QHash<QString,QVariant> *activeOptions,QJsonValue instance,QString key);
 
     //JSON
@@ -53,6 +53,10 @@ private:
     int systemInherit(const QHash<QString, QVariant> &systemElement, QHash<QString,QVariant> *activeOptions, QStringList *activeSystems, QHash<QString,QVariant> *variables, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *runtimeValues);
     void environmentActivate(QHash<QString,QVariant> const &environmentHash, QHash<QString, QVariant> *procEnv, QHash<QString, QVariant> *runtimeValues,QHash<QString,QVariant> const &variables);
     int subsystemActivate(QHash<QString,QVariant> *subsystemElement, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *variables, QHash<QString,QVariant> *runtimeValues, QHash<QString,QVariant> *activeOptions);
+    //For subsystems
+    void activateVariablesAndEnvironments(QHash<QString,QVariant> const &inputHash, QHash<QString,QVariant> *variables, const QHash<QString, QVariant> &activeOptions, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *runtimeValues);
+    int addExecution(QHash<QString,QVariant> const &sourceElement, QHash<QString,QVariant> *targetElement);
+    void processExecutionElement(QHash<QString,QVariant> *execElement, QHash<QString,QVariant> const &variables, const QHash<QString, QString> &prefixTable);
 
 signals:
     void reportError(int errorLevel,QString message);

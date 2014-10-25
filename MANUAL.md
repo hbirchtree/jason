@@ -9,14 +9,14 @@ It is designed to be flexible and handy to manage a large amount of programs you
 
 ## Heres a much more in-depth explanation of each feature
  *   *.exec: an execution value. has to be prefixed with the selected system and is used to execute programs.
- *   *.workdir: where to execute. Is paired with a *.exec value of same prefix. is completely optional.
+ *   workdir: where to execute.
+ *   detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
  *   desktop.file: contains entries used in the .desktop file generation process.
      + desktop.displayname: used in the Name= field as well as the GUI.
      + desktop.description: used in the Comment= field (may fill in the Description= field as well?)
      + desktop.wmclass: used in the StartupWMClass= field
      + desktop.icon: used in the Icon= field and possibly in the GUI in the future
      + desktop.action.*: an object containing a desktop action, in the form desktop.action.{action-id}
-       - action-id: should match the suffix of the action, desktop.action.launcher for instance.
        - desktop.displayname: used in the Name= field as well as the GUI if the action is launched
        - *.exec: the execution value of the action, is not inserted into the .desktop file.
        - *.workdir: the working directory for the execution of the action, not inserted into the .desktop file.
@@ -26,9 +26,9 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - Due to the nature of Jason, you will be able to share options between these, creating a "desktop.file" object in an imported file.
 
  *   global.*: a place where different values are thrown in order to be used by any system.
-    + .detachable-process: boolean value determining whether or not to expect a detached process. shows a dialog window that must be closed manually by the user in order to signal the end of the main process.
     + .jason-opts: an object containing several options related to Jason:
-    + jason.hide-ui-on-run: boolean value, hides Jason's progress window when the main process starts.
+      - jason.hide-ui-on-run: boolean value, hides Jason's progress window when the main process starts.
+      - jason.window-dimensions: string containing the desired window dimensions.
 
  *   launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
 
@@ -59,7 +59,7 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - desktop.title
        - desktop.icon
        - Are displayed when the subsystem is activated, icon currently holds no purpose but may have a purpose in the future.
-     + enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value. constants do not need this.
+     + enabler: the name of the value, prepended with subsystems., which may contain different values used in the subsystem. the value provided by this is hereunder referred to as the input value.
      + environment: typical environment, enabled when the subsystem is enabled.
      + variables: typical, enabled when the subsystem is enabled.
      + Different types: (specified in the "type" key)
@@ -67,6 +67,7 @@ It is designed to be flexible and handy to manage a large amount of programs you
        - substitution:
          * trigger: when to run, sys-prerun or sys-postrun
          * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
+         * does-exec: true or false, determines if the program should search for keys related to execution.
          * *.exec: execute and substitute possible value inside the command with string from input variable.
          * substitutes the variable specified by "variable" with the one supplied by the enabler. may substitute parts of an environment or .exec statement.
        - option:
@@ -80,14 +81,16 @@ It is designed to be flexible and handy to manage a large amount of programs you
            + key-value-set: (the values below are inserted at the same level as the subtype, which again is at the same level as the type, they are not nested.)
              - *.exec: two variables are substituted, a key and value, for use with operations that involve this.
              - trigger: can be sys-prerun or sys-postrun depending on when it is to be run.
-             - sets: an array with objects.
-             - id: the string of this value is used to select it.
-             - keysets: an array containing keys beginning with key.* and value.*. given "key.KEYHERE": "STRING", KEYHERE is the variable it replaces (in format %KEYHERE%) and STRING is the substituted variable.
+             - sets: an array with objects specified by:
+                * id: the string of this value is used to select it.
+                * keysets specified by the keyname in the key and value in the value. example: "'Long Key With Spaces Here'": "'some value'"
+                * keys and values are directly substituted into the *.exec command.
+                * it does not follow the typical execution standard of Jason, but is simpler.
 
  *   environment:
      + Different types:
-       - run-prefix: prefixed to the main execution command only, looks for  a "*.exec.prefix" key and adds this to the list of prefixes. no prioritization is supported.
-     + run-suffix: suffixed to the main execution command only
+       - run-prefix: prefixed to the main execution command only, looks for  a "exec.prefix" key and adds this to the list of prefixes. no prioritization is supported.
+       - run-suffix: suffixed to the main execution command only
        - same as run-prefix except it looks for "*.exec.suffix".
      + variable: normal variable, name and value, value has its variable resolved.
 
@@ -100,14 +103,14 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + identifier: the key used in "launchtype". must not collide with other systems. is required.
      + may contain the standard variable array
      + may contain an environment array
-     + *.exec value which is prefixed with the config-prefix, its command is prefixed with launch-prefix, and is run in a *.workdir of matching system.
+     + *.exec value which is prefixed with the config-prefix, its command is prefixed with launch-prefix, and is run in directory specified by "workdir".
      + *.prerun and *.postrun must be the same type as the main system in order to run, they are otherwise not picked up. preruns and postruns are inherited.
 
  *   *.prerun/*.postrun: is an array of items that may be run before or after the main process
-     +   priority: an int, used to make an entry run before or after the others, 0 makes it run before the others in case of prerun, 1 makes it run after the others in case of postrun.
+     + priority: an int, used to make an entry run before or after the others. 0 means standard procedure (append for prerun, prepend for postrun) while -1 means explicit appending and 1 explicit prepending.
      + display.title: used in the GUI to display what is going on.
      + *.exec: the program to run, may be of any kind of system. (its launch-prefix is determined from the prefix of the variable name.)
-     + *.workdir: where to run the program.
+     + workdir: where to run the program.
 
 ## Variable substitution
  * Variables occur in the format %VARIABLE% and are substituted by the function resolveVariable(QString). The list of variables can be substituted internally by running resolveVariables(), which will loop through and resolve variables, making them pure strings. (None of this matters to the end-user, though.)

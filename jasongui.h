@@ -35,12 +35,14 @@ signals:
     void postMessage(int,QString);
     void detachedHasClosed();
 
-public slots:
+private slots:
     void showMessage(int status,QString message);
     void detachedMessage(QString title);
     void showOutput(QString stdOut,QString stdErr);
     void printMessage(QString message);
     void detachedProgramNotifyEmit(int retInt);
+    void resizeWindow(int width,int height);
+    void hideJasonGui(bool doShow);
 };
 
 #endif // JASONGUI_H

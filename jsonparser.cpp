@@ -81,8 +81,18 @@ int jsonparser::parseStage1(QJsonObject mainObject,QHash<QString,QVariant> *syst
                     systemTable->unite(resultHash.value("systems").toHash());
                 if(resultHash.value("subsystems").isValid())
                     subsystems->append(resultHash.value("subsystems").toList());
-                if(resultHash.value("activeopts").isValid())
-                    activeOptions->unite(resultHash.value("activeopts").toHash());
+                if(resultHash.value("activeopts").isValid()){ //When merging, we want to avoid having keys with the same names.
+                    QVariant actOpts = resultHash.value("activeopts");
+                    foreach(QString key,actOpts.toHash().keys()){
+                        QString insertKey = key;
+                        int insertInt = 0;
+                        while(activeOptions->contains(insertKey)){
+                            insertInt++;
+                            insertKey = key+"."+QString::number(insertInt);
+                        }
+                        activeOptions->insert(insertKey,actOpts.toHash().value(key));
+                    }
+                }
                 if(resultHash.value("variables").isValid())
                     substitutes->unite(resultHash.value("variables").toHash());
                 if(resultHash.value("procenv").isValid())
@@ -115,7 +125,7 @@ int jsonparser::stage2ActiveOptionAdd(QHash<QString,QVariant> *activeOptions,QJs
     return 0;
 }
 
-void jsonparser::parseStage2(QJsonObject mainObject,QHash<QString,QVariant> const &systemTable,QHash<QString,QVariant> *activeOptions){
+void jsonparser::parseStage2(QJsonObject mainObject,QHash<QString,QVariant> *activeOptions){
     /*
      * Stage 2:
      * Where options specified by the user or distributor are applied.
@@ -158,9 +168,9 @@ int jsonparser::jsonParse(QJsonDocument jDoc, QHash<QString, QVariant> *targetHa
     }
 
     sendProgressTextUpdate(tr("Gathering active options"));
-    parseStage2(mainTree,systemTable,&activeOptions);
+    parseStage2(mainTree,&activeOptions);
     foreach(QString import,importedFiles){
-        parseStage2(jsonOpenFile(import).object(),systemTable,&activeOptions);
+        parseStage2(jsonOpenFile(import).object(),&activeOptions);
     } //Yes, very odd, but we want to populate activeOptions before running stage 1.
 
     sendProgressTextUpdate(tr("Gathering fundamental values"));
@@ -361,12 +371,13 @@ int jsonparser::jasonActivateSystems(const QHash<QString, QVariant> &jsonData, Q
     foreach(QString sys,activeSystems){ //Does not need extensive error-checking
         systemInherit(systemTable.value(sys).toHash(),&activeOptions,&activeSystems,&variables,&procEnvHash,&prepRunValues);
     }
+    activeSystems.append(systemObject.value("identifier").toString());
 
     sendProgressTextUpdate(tr("Activating subsystems"));
     //Handling subsystems
     for(int i=0;i<subsystems.size();i++)
         if(!subsystems.at(i).toHash().isEmpty()){
-            QHash<QString,QVariant> subsystemElement;
+            QHash<QString,QVariant> subsystemElement = subsystems.at(i).toHash();
             if(subsystemElement.value("enabler").isValid())
                 if(activeOptions.value("subsystem."+subsystemElement.value("enabler").toString()).isValid())
                     subsystemActivate(&subsystemElement,&procEnvHash,&variables,&prepRunValues,&activeOptions);
@@ -376,11 +387,113 @@ int jsonparser::jasonActivateSystems(const QHash<QString, QVariant> &jsonData, Q
     sendProgressTextUpdate(tr("Resolving variables"));
     resolveVariables(&variables); //We might have new variables in the system
     sendProgressTextUpdate(tr("Processing preruns and postruns"));
-    //Write something to handle preruns and postruns
+    //Handling preruns and postruns, the standard way!
+    QList<QVariant> prerunList = prepRunValues.value("sys-prerun").toList();
+    QList<QVariant> postrunList = prepRunValues.value("sys-postrun").toList();
+    QHash<QString,QVariant> currentRun;
+    QHash<QString,QVariant> outputExec;
+    foreach(QString sys,activeSystems){
+        QVariant system = systemTable.value(sys);
+        QString prefix = system.toHash().value("config-prefix").toString();
+        foreach(QString opt,activeOptions.keys())
+            if((opt.startsWith(prefix+".prerun"))||(opt.startsWith(prefix+".postrun")))
+                if(activeOptions.value(opt).type()==QVariant::List){
+                    QList<QVariant> runs = activeOptions.value(opt).toList();
+                    for(int i=0;i<runs.size();i++){
+                        outputExec.clear();
+                        currentRun = runs.at(i).toHash();
+                        int priority = currentRun.value("priority").toInt();
+                        addExecution(currentRun,&outputExec);
+                        if(opt.endsWith(".prerun"))
+                            switch(priority){
+                            case 0: prerunList.append(outputExec); break;
+                            case 1: prerunList.append(outputExec); break;
+                            case -1: prerunList.prepend(outputExec); break;
+                            }
+                        if(opt.endsWith(".postrun"))
+                            switch(priority){
+                            case 0: postrunList.prepend(outputExec); break;
+                            case 1: postrunList.append(outputExec); break;
+                            case -1: postrunList.prepend(outputExec); break;
+                            }
+                    }
+                }
+    }
 
-    qDebug() << "Runtime values:" << runtimeValues << "\n\nProcEnv:" << procEnvHash << "\n\nVariables:" << variables;
+    sendProgressTextUpdate(tr("Setting up execution queue"));
+    //At this point everything is verified and ready to go. We will lastly do variable resolution on the command lines and other variables.
+    QHash<QString,QString> prefixTable;
+    foreach(QString sys,activeSystems){ //We prepare the launch prefixes
+        prefixTable.insert(systemTable.value(sys).toHash().value("config-prefix").toString(),systemTable.value(sys).toHash().value("launch-prefix").toString());
+    }
+    //Containers for the execution elements
+    QList<QVariant> prerunQueue;
+    QHash<QString,QVariant> mainExec;
+    QList<QVariant> postrunQueue;
+    QHash<QString,QVariant> actions;
+    QHash<QString,QVariant> shellData;
+
+    //We'll reuse "currentRun"
+    currentRun.clear();
+    for(int i=0;i<prerunList.size();i++){
+        currentRun = prerunList.at(i).toHash();
+        processExecutionElement(&currentRun,variables,prefixTable);
+        prerunQueue.append(currentRun);
+    }
+    for(int i=0;i<postrunList.size();i++){
+        currentRun = postrunList.at(i).toHash();
+        processExecutionElement(&currentRun,variables,prefixTable);
+        postrunQueue.append(currentRun);
+    }
+    addExecution(activeOptions,&mainExec); //We'll grab all options from activeOptions, this should be standard.
+    if(activeOptions.value("desktop.file").isValid())
+        if(activeOptions.value("desktop.file").toHash().value("desktop.displayname").isValid())
+            mainExec.insert("desktop.title",activeOptions.value("desktop.file").toHash().value("desktop.displayname").toString());
+    if(activeOptions.value("desktop.file").isValid())
+        if(activeOptions.value("desktop.file").toHash().value("desktop.icon").isValid())
+            mainExec.insert("desktop.icon",activeOptions.value("desktop.file").toHash().value("desktop.icon").toString());
+    processExecutionElement(&mainExec,variables,prefixTable);
+
+    foreach(QString desktopkey,activeOptions.value("desktop.file").toHash().keys())
+        if(desktopkey.startsWith("desktop.action.")){
+            currentRun.clear(); outputExec.clear();
+            currentRun = activeOptions.value("desktop.file").toHash().value(desktopkey).toHash();
+            addExecution(currentRun,&outputExec);
+            if(outputExec.value("desktop.displayname").isValid())
+                outputExec.insert("desktop.title",outputExec.value("desktop.displayname").toString());
+            processExecutionElement(&outputExec,variables,prefixTable);
+            actions.insert(desktopkey.split(".")[2],outputExec);
+        }
+
+    shellData.insert("shell",activeOptions.value("shell.properties").toHash().value("shell").toString());
+    shellData.insert("shell.argument",activeOptions.value("shell.properties").toHash().value("shell.argument").toString());
+
+    //AT LONG FUCKING LAST
+    runtimeValues->insert("prerun",prerunQueue);
+    runtimeValues->insert("actions",actions);
+    runtimeValues->insert("main",mainExec);
+    runtimeValues->insert("postrun",postrunQueue);
+    runtimeValues->insert("procenv",procEnvHash);
+    runtimeValues->insert("shelldata",shellData);
+    runtimeValues->insert("jason-opts",activeOptions.value("global.jason-opts").toHash());
 
     return 0;
+}
+
+void jsonparser::processExecutionElement(QHash<QString,QVariant> *execElement,QHash<QString,QVariant> const &variables,QHash<QString,QString> const &prefixTable){
+    if((execElement->value("exec.command").isValid())&&(execElement->value("exec.type").isValid())){
+        QString command = prefixTable.value(execElement->value("exec.type").toString())+" "+execElement->value("exec.command").toString();
+        command = resolveVariable(variables,command); //We perform substitution
+        execElement->insert("exec",command);
+        execElement->remove("exec.command");
+        execElement->remove("exec.type");
+    }
+    if(execElement->value("workdir").isValid())
+        execElement->insert("workdir",resolveVariable(variables,execElement->value("workdir").toString()));
+    if(execElement->value("desktop.icon").isValid())
+        execElement->insert("desktop.icon",resolveVariable(variables,execElement->value("desktop.icon").toString()));
+    if(execElement->value("desktop.title").isValid())
+        execElement->insert("desktop.title",resolveVariable(variables,execElement->value("desktop.title").toString()));
 }
 
 int jsonparser::systemActivate(QHash<QString,QVariant> const &systemElement,QHash<QString,QVariant> *activeOptions,QStringList *activeSystems,QHash<QString,QVariant> *variables,QHash<QString,QVariant> *procEnv,QHash<QString,QVariant> *runtimeValues){
@@ -396,7 +509,7 @@ int jsonparser::systemActivate(QHash<QString,QVariant> const &systemElement,QHas
                 configPrefix=object.toString();
         if(key=="inherits")
             if(object.type()==QMetaType::QString)
-                activeSystems->append(object.toString());
+                activeSystems->append(object.toString().split(","));
         if(key=="environment")
             if(object.type()==QVariant::List){
                 QList<QVariant> envList = object.toList();
@@ -438,7 +551,7 @@ int jsonparser::systemInherit(QHash<QString,QVariant> const &systemElement,QHash
                 configPrefix=object.toString();
         if(key=="inherits")
             if(object.type()==QMetaType::QString)
-                activeSystems->append(object.toString()); //We want recursive inheritance
+                activeSystems->append(object.toString().split(",")); //We want recursive inheritance
         if(key=="environment")
             if(object.type()==QVariant::List){
                 QList<QVariant> envList = object.toList();
@@ -459,7 +572,7 @@ void jsonparser::environmentActivate(QHash<QString,QVariant> const &environmentH
     //Treat the different types according to their parameters and realize their properties
     if(type=="run-prefix"){
         if(environmentHash.value("exec.prefix").isValid()) //CHANGE: WE NO LONGER GIVE A BUNG ABOUT WHAT SYSTEM IT IS; LET THE USER TAKE CARE OF THIS
-            runtimeValues->insert("run-prefix",resolveVariable(variables,runtimeValues->value("run-prefix").toString().append(" "+environmentHash.value("exec.suffix").toString())));
+            runtimeValues->insert("run-prefix",resolveVariable(variables,runtimeValues->value("run-prefix").toString().append(environmentHash.value("exec.prefix").toString()+" ")));
     }else if(type=="run-suffix"){
         if(environmentHash.value("exec.suffix").isValid())
             runtimeValues->insert("run-suffix",resolveVariable(variables,runtimeValues->value("run-suffix").toString().append(" "+environmentHash.value("exec.suffix").toString())));
@@ -474,5 +587,169 @@ void jsonparser::environmentActivate(QHash<QString,QVariant> const &environmentH
 }
 
 int jsonparser::subsystemActivate(QHash<QString,QVariant> *subsystemElement, QHash<QString,QVariant> *procEnv, QHash<QString,QVariant> *variables, QHash<QString,QVariant> *runtimeValues, QHash<QString,QVariant> *activeOptions){
+    QVariant typeVariant = subsystemElement->value("type");
+    QString type;
+    QVariant option;
+    if(typeVariant.isValid()){
+        type=typeVariant.toString();
+    }else
+        return 1;
+    option=activeOptions->value("subsystem."+subsystemElement->value("enabler").toString());
 
+    //We first handle the part that is common to all of the types
+    QHash<QString,QVariant> appearanceStuff;
+    if(subsystemElement->value("appearance").isValid()){
+        //And that is all. It should already be formatted correctly.
+        appearanceStuff = subsystemElement->value("appearance").toHash();
+    }
+
+    if(type=="bool")
+        if(option.toBool()){
+            //We won't do more than this. Anything similar would be doable through other means.
+            if(!appearanceStuff.value("desktop.title").toString().isEmpty())
+                sendProgressTextUpdate(resolveVariable(*variables,appearanceStuff.value("desktop.title").toString()));
+            activateVariablesAndEnvironments(*subsystemElement,variables,*activeOptions,procEnv,runtimeValues);
+        }
+    if(type=="option"){
+        if(!appearanceStuff.value("desktop.title").toString().isEmpty())
+            sendProgressTextUpdate(resolveVariable(*variables,appearanceStuff.value("desktop.title").toString()));
+        QList<QVariant> optsList = subsystemElement->value("options").toList();
+        QHash<QString,QVariant> optsHash; QHash<QString,QVariant> optHash; QString currentOpt;
+        for(int i=0;i<optsList.size();i++)
+            if(optsList.at(i).toHash().value("id").isValid()){ //We'll use this to decide whether it's a good or bad object.
+                optHash.clear(); currentOpt.clear(); optHash = optsList.at(i).toHash();
+                currentOpt = optHash.value("id").toString(); optHash.remove("id");
+                optsHash.insert(currentOpt,optHash);
+            } optHash.clear();
+        foreach(QString opt,option.toString().split(",")){
+            if(optsHash.value(opt).isValid()){
+                optHash = optsHash.value(opt).toHash();
+                activateVariablesAndEnvironments(optHash,variables,*activeOptions,procEnv,runtimeValues);
+            }else
+                reportError(1,tr("Invalid object for option subsystem detected. Please correct this."));
+        }
+    }
+    if(type=="substitution"){
+        if(!appearanceStuff.value("desktop.title").toString().isEmpty())
+            sendProgressTextUpdate(resolveVariable(*variables,appearanceStuff.value("desktop.title").toString()));
+        //This class is essentially going to import a variable from the option. We will simply put the variable in the global variable system.
+        //First, we insert the substituted variable.
+        if(!subsystemElement->value("variable").isValid()){
+            reportError(1,tr("Substitution subsystem does not have a variable. Please correct this."));
+            return 1;
+        }
+        variableHandle(variables,subsystemElement->value("variable").toString(),option.toString()); //We won't bother with keeping it local or anything.
+
+        //We then check for stuff that might include this substitution
+        activateVariablesAndEnvironments(*subsystemElement,variables,*activeOptions,procEnv,runtimeValues);
+
+        //Exec
+        QHash<QString,QVariant> targetElement = appearanceStuff;
+        if(addExecution(*subsystemElement,&targetElement)==0){
+            //Not efficient. We need to improve this. Soon.
+            QList<QVariant> runlist;
+            QString trigger = subsystemElement->value("trigger").toString();
+            if(trigger.isEmpty())
+                trigger = "sys-prerun";
+            if((trigger!="sys-prerun")&&(trigger!="sys-postrun")){
+                reportError(1,tr("Invalid trigger was specified for substitution subsystem. Please correct this."));
+                return 1;
+            }
+            runlist = runtimeValues->value(trigger).toList();
+            runlist.append(targetElement);
+            runtimeValues->insert(trigger,runlist);
+        }
+    }
+    if(type=="select"){
+        if(!subsystemElement->value("subtype").isValid())
+            return 1;
+        if(subsystemElement->value("subtype").toString()=="key-value-set"){
+            //Works by adding each of the keysets present in the selected set as a command in the prerun or postrun queue
+            //We make a template for inserting into the runtimeValues
+            QHash<QString,QVariant> templateRunHash = appearanceStuff;
+            QString trigger,commandTemplate,execType;
+            foreach(QString key,subsystemElement->keys())
+                if(key.endsWith(".exec")){
+                    commandTemplate=subsystemElement->value(key).toString();
+                    execType=key.split(".")[0];
+                }
+            if(commandTemplate.isEmpty()){ //If there is no command, we go no further.
+                reportError(1,tr("Keyset subsystem has no command. Please correct this."));
+                return 1;
+            }
+            templateRunHash.insert("exec.type",execType);
+            trigger=subsystemElement->value("trigger").toString();
+            if(trigger.isEmpty()) //Default to prerun
+                trigger="sys-prerun";
+
+            //We start by converting the set-array to a QHash for an easier time finding the set we want.
+            QList<QVariant> optsList = subsystemElement->value("sets").toList();
+            QHash<QString,QVariant> optsHash; QHash<QString,QVariant> optHash; QString currentOpt;
+            for(int i=0;i<optsList.size();i++)
+                if(optsList.at(i).toHash().value("id").isValid()){ //We'll use this to decide whether it's a good or bad object.
+                    optHash.clear(); currentOpt.clear(); optHash = optsList.at(i).toHash();
+                    currentOpt = optHash.value("id").toString(); optHash.remove("id");
+                    optsHash.insert(currentOpt,optHash);
+                } optHash.clear();
+            if(optsHash.value(option.toString()).isValid()){
+                QList<QVariant> runlist = runtimeValues->value(trigger).toList();
+                QString value;
+                QHash<QString,QVariant> currentRH;
+                QString tmpCmd;
+                foreach(QString key,optsHash.value(option.toString()).toHash().keys()){
+                    tmpCmd = commandTemplate; //replace(QString) modifies the QString, therefore we need to copy it.
+                    currentRH = templateRunHash;
+                    value = optsHash.value(option.toString()).toHash().value(key).toString();
+                    currentRH.insert("exec.command",tmpCmd.replace("%JASON_KEY%",key).replace("%JASON_VALUE%",value));
+                    runlist.append(currentRH);
+                }
+                runtimeValues->insert(trigger,runlist);
+            } else{
+                reportError(1,tr("Invalid option for keyset subsystem. Please correct this."));
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+void jsonparser::activateVariablesAndEnvironments(QHash<QString,QVariant> const &inputHash,QHash<QString,QVariant> *variables,QHash<QString,QVariant> const &activeOptions,QHash<QString,QVariant> *procEnv,QHash<QString,QVariant> *runtimeValues){
+    if(inputHash.value("variables").isValid())
+        if(inputHash.value("variables").type()==QVariant::List)
+            variablesImport(inputHash.value("variables").toList(),variables,activeOptions);
+    if(inputHash.value("environment").isValid())
+        if(inputHash.value("environment").type()==QVariant::List){
+            QList<QVariant> envList = inputHash.value("environment").toList();
+            for(int i=0;i<envList.size();i++){
+                if(envList.at(i).isValid())
+                    if(!envList.at(i).toHash().isEmpty())
+                        environmentActivate(envList.at(i).toHash(),procEnv,runtimeValues,*variables);
+            }
+        }
+}
+
+int jsonparser::addExecution(QHash<QString,QVariant> const &sourceElement,QHash<QString,QVariant> *targetElement){
+    bool validExec = false;
+    foreach(QString key,sourceElement.keys()){
+        if(key.endsWith(".exec")){
+            validExec=true;
+            targetElement->insert("exec.command",sourceElement.value(key).toString());
+            targetElement->insert("exec.type",key.split(".")[0]);
+        }
+        if(key=="lazy-exit-status")
+            targetElement->insert("lazyexit",sourceElement.value(key).toBool());
+        if(key.endsWith("workdir"))
+            targetElement->insert("workdir",sourceElement.value("workdir").toString());
+        if(key=="detachable-process")
+            targetElement->insert("detach",sourceElement.value(key).toBool());
+        if(key=="private.process-environment")
+            targetElement->insert("procenv",sourceElement.value(key).toHash());
+        if(key=="desktop.title")
+            targetElement->insert(key,sourceElement.value(key).toString());
+        if(key=="desktop.icon")
+            targetElement->insert(key,sourceElement.value(key).toString());
+    }
+    if(validExec)
+        return 0;
+    return 1;
 }

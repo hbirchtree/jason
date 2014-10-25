@@ -33,7 +33,7 @@ void JasonGui::startParse(QString startDocument, QString actionId, QString deskt
     connect(&jParse,SIGNAL(updateProgressTitle(QString)),this,SLOT(setWindowTitle(QString)));
     connect(&jParse,SIGNAL(finishedProcessing()),this,SLOT(close()));
     connect(&jParse,SIGNAL(toggleCloseButton(bool)),ui->closeButton,SLOT(setEnabled(bool)));
-    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),this,SLOT(setVisible(bool)));
+    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),this,SLOT(hideJasonGui(bool)));
     connect(&jParse,SIGNAL(changeProgressBarRange(int,int)),ui->progressBar,SLOT(setRange(int,int)));
     connect(&jParse,SIGNAL(changeProgressBarValue(int)),ui->progressBar,SLOT(setValue(int)));
 
@@ -63,6 +63,19 @@ void JasonGui::showMessage(int status, QString message){
     if(status==2)
         messageBox->setWindowTitle(tr("Jason error"));
     messageBox->show();
+}
+
+void JasonGui::resizeWindow(int width, int height){
+    setFixedWidth(width);
+    setFixedHeight(height);
+    setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+}
+
+void JasonGui::hideJasonGui(bool doShow){
+    if(doShow)
+        showNormal();
+    if(!doShow)
+        showMinimized();
 }
 
 void JasonGui::detachedMessage(QString title){
