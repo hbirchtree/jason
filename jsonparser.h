@@ -26,6 +26,9 @@ public:
     int jasonActivateSystems(QHash<QString,QVariant> const &jsonData, QHash<QString, QVariant> *runtimeValues);
 
 private:
+    //Constants
+    QString startDir;
+
     //Stages
     int parseStage1(QJsonObject mainObject, QHash<QString,QVariant> *systemTable, QHash<QString, QVariant> *substitutes, QList<QVariant> *subsystems, QStringList *importedFiles, QHash<QString, QVariant> *activeOptions, QHash<QString, QVariant> *procEnv);
     void parseStage2(QJsonObject mainObject, QHash<QString,QVariant> *activeOptions);

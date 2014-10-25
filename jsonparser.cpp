@@ -8,7 +8,11 @@ jsonparser::jsonparser(QObject *parent) :
 QJsonDocument jsonparser::jsonOpenFile(QString filename){
     QFile jDocFile;
     QFileInfo cw(filename);
-    jDocFile.setFileName(cw.absolutePath()+"/"+cw.fileName());
+    if(startDir.isEmpty()){
+        startDir = cw.absolutePath();
+        jDocFile.setFileName(startDir+"/"+cw.fileName());
+    }else
+        jDocFile.setFileName(startDir+"/"+cw.fileName());
     if (!jDocFile.exists()) {
         sendProgressTextUpdate(tr("Failed due to the file not existing"));
         return QJsonDocument();

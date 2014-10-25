@@ -164,6 +164,8 @@ int JasonParser::executeQueue(QHash<QString,QVariant> const &runtimeValues,QStri
     bool hideUi;
     if(runtimeValues.value("jason-opts").toHash().value("jason.hide-ui-on-run").isValid())
         hideUi = runtimeValues.value("jason-opts").toHash().value("jason.hide-ui-on-run").toBool();
+    if(runtimeValues.value("main").toHash().value("desktop.title").isValid())
+        updateProgressTitle(runtimeValues.value("main").toHash().value("desktop.title").toString());
     QHash<QString,QVariant> shellData = runtimeValues.value("shelldata").toHash();
     QProcessEnvironment procEnv = QProcessEnvironment::systemEnvironment();
     if(runtimeValues.value("procenv").isValid()){

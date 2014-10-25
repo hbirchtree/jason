@@ -8,6 +8,7 @@ JasonGui::JasonGui(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->closeButton->setEnabled(false);
+    setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowStaysOnBottomHint|Qt::WindowCloseButtonHint);
 }
 
 JasonGui::~JasonGui()
@@ -68,14 +69,17 @@ void JasonGui::showMessage(int status, QString message){
 void JasonGui::resizeWindow(int width, int height){
     setFixedWidth(width);
     setFixedHeight(height);
-    setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+    setMinimumHeight(height);
+    setMaximumHeight(height);
+    setMinimumWidth(width);
+    setMaximumWidth(width);
 }
 
 void JasonGui::hideJasonGui(bool doShow){
-    if(doShow)
-        showNormal();
     if(!doShow)
         showMinimized();
+    if(doShow)
+        show();
 }
 
 void JasonGui::detachedMessage(QString title){
