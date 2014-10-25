@@ -29,6 +29,8 @@ void JasonParser::startParse(){
     jsonparser parser;
 
     connect(&parser,SIGNAL(sendProgressTextUpdate(QString)),this,SLOT(forwardProgressTextUpdate(QString)));
+    connect(&parser,SIGNAL(reportError(int,QString)),this,SLOT(forwardErrorMessage(int,QString)));
+    connect(&parser,SIGNAL(sendProgressBarUpdate(int)),this,SLOT(forwardProgressValueUpdate(int)));
 
     if(parser.jsonParse(parser.jsonOpenFile(startDocument),&jsonFinalData)!=0){
         emit toggleCloseButton(true);
@@ -42,9 +44,11 @@ void JasonParser::startParse(){
     if(!desktopFile.isEmpty()){
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         desktoptools desktopfilegenerator;
+        connect(&desktopfilegenerator,SIGNAL(sendProgressTextUpdate(QString)),this,SLOT(forwardProgressTextUpdate(QString)));
+        connect(&desktopfilegenerator,SIGNAL(reportError(int,QString)),this,SLOT(forwardErrorMessage(int,QString)));
         QVariant object = jsonFinalData.value("activeopts").toHash().value("desktop.file");
         if(object.isValid()&&object.type()==QVariant::Hash){
-            desktopfilegenerator.desktopFileBuild(object.toHash(),jsonFinalData.value("systems").toHash());
+            desktopfilegenerator.generateDesktopFile(desktopfilegenerator.desktopFileBuild(object.toHash()),desktopFile,jasonPath,startDocument);
         }
     } else {
         QHash<QString,QVariant> runtimeValues;
@@ -87,6 +91,10 @@ void JasonParser::startParse(){
 
 void JasonParser::forwardProgressTextUpdate(QString message){
     updateProgressText(message);
+}
+
+void JasonParser::forwardErrorMessage(int status,QString message){
+    broadcastMessage(status,message);
 }
 
 void JasonParser::forwardProgressValueUpdate(int value){

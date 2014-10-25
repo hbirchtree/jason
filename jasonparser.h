@@ -1,17 +1,12 @@
 #ifndef JASONPARSER_H
 #define JASONPARSER_H
 
-#include "jasongraphical.h"
-
-#include <QFile>
 #include <QFileInfo>
-#include <QTextStream>
 #include <QDebug>
 #include <stdio.h>
 #include <QString>
 #include <QStringList>
 
-#include <QProcess>
 #include <QProcessEnvironment>
 #include <QEventLoop>
 
@@ -38,6 +33,7 @@ private slots:
     void receiveLogOutput(QString stdOut,QString stdErr);
     void forwardProgressTextUpdate(QString message);
     void forwardProgressValueUpdate(int value);
+    void forwardErrorMessage(int status,QString message);
 
 signals:
     //Related to the general look and workings

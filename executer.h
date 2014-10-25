@@ -6,7 +6,6 @@
 #include <QProcessEnvironment>
 #include <QList>
 #include <QVariant>
-#include <QHash>
 
 class Executer : public QThread
 {

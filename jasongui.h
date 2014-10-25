@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QGridLayout>
 #include <QTextEdit>
+#include <QThread>
 
 namespace Ui {
 class JasonGui;

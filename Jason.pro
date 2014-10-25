@@ -13,7 +13,6 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    jasongraphical.cpp \
     jasonparser.cpp \
     jasongui.cpp \
     executer.cpp \
@@ -21,7 +20,6 @@ SOURCES += main.cpp \
     desktoptools.cpp
 
 HEADERS  += jasonparser.h \
-    jasongraphical.h \
     jasongui.h \
     executer.h \
     jsonparser.h \

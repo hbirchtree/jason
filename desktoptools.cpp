@@ -5,101 +5,78 @@ desktoptools::desktoptools(QObject *parent) :
 {
 }
 
-QHash<QString,QVariant> desktoptools::desktopFileBuild(QHash<QString,QVariant> const &desktopObject,QHash<QString,QVariant> const &systemTable){
+QHash<QString,QVariant> desktoptools::desktopFileBuild(QHash<QString,QVariant> const &desktopObject){
 /*
  * Desktop files execute by ./Jason [JSON-file]
  * A desktop action entry will use the appendage of --action [id] to make a distinction between the
  * different entries that may exist.
 */
-    QString dName,dDesc,dWMClass,dIcon,dCat;
-    qDebug() << desktopObject;
-    foreach(QString key, desktopObject.keys()){
-        qDebug() << key;
-    }
     QHash<QString,QVariant> desktopHash;
-    desktopHash.insert("displayname",dName);
-    desktopHash.insert("description",dDesc);
-    desktopHash.insert("wmclass",dWMClass);
-    desktopHash.insert("categories",dCat);
-    desktopHash.insert("icon",dIcon);
+
+    //Defaults
+    desktopHash.insert("Version","1.0");
+    desktopHash.insert("Type","Application");
+    desktopHash.insert("Terminal","false");
+
+    if(desktopObject.value("desktop.displayname").isValid())
+        desktopHash.insert("Name",desktopObject.value("desktop.displayname").toString());
+    if(desktopObject.value("desktop.icon").isValid())
+        desktopHash.insert("Icon",desktopObject.value("desktop.icon").toString());
+    if(desktopObject.value("desktop.description").isValid())
+        desktopHash.insert("Comment",desktopObject.value("desktop.description").toString());
+    if(desktopObject.value("desktop.wmclass").isValid())
+        desktopHash.insert("StartupWMClass",desktopObject.value("desktop.wmclass").toString());
+    if(desktopObject.value("desktop.categories").isValid())
+        desktopHash.insert("Categories",desktopObject.value("desktop.categories").toString());
+    desktopHash.insert("Actions",QString());
+    QHash<QString,QVariant> desktopActions;
+    foreach(QString key,desktopObject.keys()){
+        if(key.startsWith("desktop.action."))
+            if(desktopObject.value(key).toHash().value("desktop.displayname").isValid()){
+                desktopHash.insert("Actions",key.split(".")[2]+";"+desktopHash.value("Actions").toString());
+                desktopActions.insert(key.split(".")[2],desktopObject.value(key).toHash().value("desktop.displayname").toString());
+            }
+        if(key.startsWith("rawdesktop."))
+            desktopHash.insert(key.split(".")[1],desktopObject.value(key).toString());
+    }
+    desktopHash.insert("desktopactions",desktopActions);
     return desktopHash;
 }
 
-//void JasonParser::generateDesktopFile(QString desktopFile, QString jasonPath, QString inputDoc){
-//    //Not a very robust function, but I believe it is sufficient for its purpose.
-//    QFile outputDesktopFile;
-//    if(!desktopFile.endsWith(".desktop"))
-//        broadcastMessage(1,tr("Warning: The filename specified for the output .desktop file does not have the correct extension.\n"));
-//    outputDesktopFile.setFileName(desktopFile);
-//    if(outputDesktopFile.exists()){
-//        emit toggleCloseButton(true);
-//        updateProgressText(tr("The file exists. Will not proceed."));
-//        emit failedProcessing();
-//        return;
-//    }
-//    if(!outputDesktopFile.open(QIODevice::WriteOnly | QIODevice::Text)){
-//        emit toggleCloseButton(true);
-//        updateProgressText(tr("Failed to open the output file for writing. Will not proceed."));
-//        emit failedProcessing();
-//        return;
-//    }
-//    QString desktopActions;
-//    QString outputContents;
-//    outputContents.append("[Desktop Entry]\nVersion=1.0\nType=Application\nTerminal=False\nExec='%JASON_EXEC%' '%INPUT_FILE%'\n%DESKTOP_ACTION_LIST%\n");
-//    foreach(QString entry,runtimeValues.keys())
-//        if(entry=="launchables"){
-//            QHash<QString,QVariant> launchables = runtimeValues.value(entry).toHash();
-//            foreach(QString key,launchables.keys()){
-//                if(key=="default.desktop"){
-//                    QHash<QString,QVariant> defaultDesktop = launchables.value(key).toHash();
-//                    foreach(QString dKey,defaultDesktop.keys()){
-//                        if(dKey=="displayname")
-//                            outputContents.append("Name="+defaultDesktop.value(dKey).toString()+"\n");
-//                        if((dKey=="description")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
-//                            outputContents.append("Comment="+defaultDesktop.value(dKey).toString()+"\n");
-//                        if((dKey=="wmclass")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
-//                            outputContents.append("StartupWMClass="+defaultDesktop.value(dKey).toString()+"\n");
-//                        if((dKey=="icon")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
-//                            outputContents.append("Icon="+defaultDesktop.value(dKey).toString()+"\n");
-//                        if((dKey=="categories")&&(!defaultDesktop.value(dKey).toString().isEmpty()))
-//                            outputContents.append("Categories="+defaultDesktop.value(dKey).toString()+"\n");
-//                    }
-//                }
-//            }
-//            foreach(QString key,launchables.keys()){
-//                if((key!="default")&&(key!="default.desktop")){
-//                    QHash<QString,QVariant> desktopAction = launchables.value(key).toHash();
-//                    QString desktopActionEntry;
-//                    foreach(QString dKey,desktopAction.keys())
-//                        if(dKey=="displayname"){
-//                            desktopActions.append(key+";");
-//                            desktopActionEntry = "[Desktop Action "+key+"]\nName="+desktopAction.value(dKey).toString()+"\nExec='%JASON_EXEC%' --action "+key+" '%INPUT_FILE%'\n";
-//                        }
-//                    outputContents.append("\n"+desktopActionEntry);
-//                }
-//            }
-//        }
-//    if(!jasonPath.isEmpty()){
-//        QFileInfo jasonInfo(jasonPath);
-//        outputContents.replace("%JASON_EXEC%",jasonInfo.canonicalFilePath());
-//    }
-//    if(!jasonPath.isEmpty()){
-//        QFileInfo docInfo(inputDoc);
-//        outputContents.replace("%INPUT_FILE%",docInfo.canonicalFilePath());
-//        outputContents.replace("%WORKINGDIR%",docInfo.canonicalPath());
-//    }
-//    if(!desktopActions.isEmpty()){
-//        outputContents.replace("%DESKTOP_ACTION_LIST%","Actions="+desktopActions);
-//    }else
-//        outputContents.replace("%DESKTOP_ACTION_LIST%",QString());
+void desktoptools::generateDesktopFile(QHash<QString,QVariant> const &desktopData, QString desktopFile, QString jasonPath, QString inputDoc){
+    QFile outputFile(desktopFile);
+    if(outputFile.exists())
+        return;
+    if(!outputFile.open(QIODevice::WriteOnly|QIODevice::Text)){
+        return;
+    }
+    QString execString;
+    QStringList outputFileContents;
+    QFileInfo jasonExec(jasonPath);
+    QFileInfo inputFile(inputDoc);
+    execString.append("'"+jasonExec.absoluteFilePath()+"' '"+inputFile.absoluteFilePath()+"'");
+    QHash<QString,QVariant> desktopDataCopy = desktopData;
+    QHash<QString,QVariant> actionData = desktopDataCopy.value("desktopactions").toHash();
+    desktopDataCopy.remove("desktopactions");
+    desktopDataCopy.insert("Exec",execString);
 
-//    QTextStream outputDocument(&outputDesktopFile);
-//    outputDocument << outputContents;
-//    outputDesktopFile.setPermissions(QFile::ExeOwner|outputDesktopFile.permissions());
-//    outputDesktopFile.close();
-
-//    updateProgressText(tr("Desktop file was generated successfully."));
-
-//    emit toggleCloseButton(true);
-//    emit finishedProcessing();
-//}
+    outputFileContents.append("[Desktop Entry]");
+    foreach(QString key,desktopDataCopy.keys())
+        outputFileContents.append(key+"="+desktopDataCopy.value(key).toString());
+    QStringList actionTemplate,aCopy;
+    actionTemplate.append("");
+    actionTemplate << "[Desktop Action %ACTION%]" << "Name=%TITLE%" << "Exec="+execString+" --action %ACTION%";
+    foreach(QString action,actionData.keys()){
+        aCopy=actionTemplate;
+        if(!action.isEmpty())
+            if(!actionData.value(action).toString().isEmpty())
+                foreach(QString line,aCopy)
+                    outputFileContents.append(line.replace("%ACTION%",action).replace("%TITLE%",actionData.value(action).toString()));
+    }
+    QTextStream textStreamer;
+    textStreamer.setDevice(&outputFile);
+    foreach(QString line,outputFileContents)
+        textStreamer << line << endl;
+    textStreamer << endl;
+    outputFile.close();
+}

@@ -1,5 +1,4 @@
 #include "executer.h"
-#include <QDebug>
 
 Executer::Executer(QObject *parent) :
     QThread(parent)

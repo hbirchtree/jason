@@ -19,15 +19,13 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + desktop.action.*: an object containing a desktop action, in the form desktop.action.{action-id}
        - desktop.displayname: used in the Name= field as well as the GUI if the action is launched
        - *.exec: the execution value of the action, is not inserted into the .desktop file.
-       - *.workdir: the working directory for the execution of the action, not inserted into the .desktop file.
+       - workdir: the working directory for the execution of the action, not inserted into the .desktop file.
      + Adding other entries into the .desktop file:
-       - A "desktop.raw" object containing keys named after the Desktop spec names, for instance "MimeType","Terminal" and etc
-       - The value will be a string that is directly inserted into the file
-       - Due to the nature of Jason, you will be able to share options between these, creating a "desktop.file" object in an imported file.
+       - A "rawdesktop.*" entry containing a string value will be inserted into the desktop file directly, splitting off what is after the "." sign and until the next "." sign as the name of the value in the desktop file.
 
  *   global.*: a place where different values are thrown in order to be used by any system.
     + .jason-opts: an object containing several options related to Jason:
-      - jason.hide-ui-on-run: boolean value, hides Jason's progress window when the main process starts.
+      - jason.hide-ui-on-run: boolean value, hides Jason's window when the main process starts.
       - jason.window-dimensions: string containing the desired window dimensions.
 
  *   launchtype: essential to selecting the main system. This is used to launch the main process only, one may use other systems to launch preruns and postruns and etc. if this is not defined somewhere, the program will likely report that Apples is stuck in a tree.
@@ -111,6 +109,16 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + display.title: used in the GUI to display what is going on.
      + *.exec: the program to run, may be of any kind of system. (its launch-prefix is determined from the prefix of the variable name.)
      + workdir: where to run the program.
+
+ *   Execution spec:
+     + Is used for preruns and postruns, the global executable commandline, actions and substituted subsystems. All options are available to these and work the exact same way for each of these.
+     + Jason has a spec for every execution being performed, except for the "select" subsystem, it is as so:
+        - bool lazy-exit-status : ignore exit status of program
+        - bool detachable-process : wait for user to declare the program closed
+        - private.process-environment : object with keys and values presenting a QProcessEnvironment
+        - desktop.icon : the icon displayed when the program runs, currently not implemented
+        - desktop.title : the title displayed when the item is activated or executed
+        - *.exec : the config prefix determines whether this is to be run or not, and determines what is prefixed to the command before running.
 
 ## Variable substitution
  * Variables occur in the format %VARIABLE% and are substituted by the function resolveVariable(QString). The list of variables can be substituted internally by running resolveVariables(), which will loop through and resolve variables, making them pure strings. (None of this matters to the end-user, though.)
