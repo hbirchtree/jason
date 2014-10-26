@@ -69,24 +69,13 @@ void JasonParser::startParse(){
         }
     }
 
-    emit finishedProcessing();
-
-//    if(desktopFile.isEmpty()){
-//        if(runProcesses(actionId)!=0){
-//            updateProgressText(tr("Error occured while trying to launch"));
-//            broadcastMessage(2,tr("Shit.\n"));
-//            emit toggleCloseButton(true);
-//            emit failedProcessing();
-//            return;
-//        }
-//    }else{
-//        updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
-//        generateDesktopFile(desktopFile,jasonPath,startDocument);
-//    }
-//    QEventLoop waitForEnd;
-//    connect(this,SIGNAL(finishedProcessing()),&waitForEnd,SLOT(quit()));
-//    waitForEnd.exec();
-//    return;
+    if(exitResult>0){
+        toggleCloseButton(true);
+        emit failedProcessing();
+        return;
+    }else
+        emit finishedProcessing();
+    return;
 }
 
 void JasonParser::forwardProgressTextUpdate(QString message){
@@ -94,6 +83,7 @@ void JasonParser::forwardProgressTextUpdate(QString message){
 }
 
 void JasonParser::forwardErrorMessage(int status,QString message){
+    exitResult++;
     broadcastMessage(status,message);
 }
 
@@ -131,6 +121,7 @@ int JasonParser::executeProcess(QString shell, QStringList arguments, QString wo
         emit displayDetachedMessage(title);
         waitLoop.exec();
     }
+    exitResult+=returnValue;
     return returnValue;
 }
 
@@ -139,6 +130,7 @@ void JasonParser::detachedMainProcessClosed(){
 }
 
 void JasonParser::receiveLogOutput(QString stdOut, QString stdErr){
+    exitResult++;
     emit emitOutput(stdOut,stdErr);
 }
 

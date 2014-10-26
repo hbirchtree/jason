@@ -46,7 +46,8 @@ void JasonGui::startParse(QString startDocument, QString actionId, QString deskt
 
     QEventLoop waitingLoop;
     connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
-    connect(&jParse,SIGNAL(failedProcessing()),&waitingLoop,SLOT(quit()));
+    connect(ui->closeButton,SIGNAL(clicked()),&waitingLoop,SLOT(quit()));
+//    connect(&jParse,SIGNAL(failedProcessing()),&waitingLoop,SLOT(quit()));
     workerThread->start();
     /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
      * This is likely the fix to that problem.

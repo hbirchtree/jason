@@ -5,7 +5,6 @@
 #include <QHash>
 #include <QString>
 #include <QVariant>
-#include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>

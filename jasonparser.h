@@ -2,10 +2,10 @@
 #define JASONPARSER_H
 
 #include <QFileInfo>
-#include <QDebug>
 #include <stdio.h>
 #include <QString>
 #include <QStringList>
+#include <QHash>
 
 #include <QProcessEnvironment>
 #include <QEventLoop>

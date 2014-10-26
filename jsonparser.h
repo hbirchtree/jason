@@ -14,8 +14,6 @@
 #include <QProcessEnvironment>
 #include <QVariant>
 
-#include <QDebug>
-
 class jsonparser : public QObject
 {
     Q_OBJECT
