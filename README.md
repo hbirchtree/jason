@@ -8,17 +8,18 @@ Remember: You are personally responsible for whatever happens when using this pr
 
 Far off in the distance:
  - A GUI for making Jason-compatible JSON files?
+ - Making it a backend library for different GUIs to access?
 
 Planned features or things to do:
- - Solidifying the program by using it and fixing flaws I encounter through that process.
+ - Adding a function in the GUI to make use of the icon label. (It's there, but nothing is in place to set the icon.)
 
 
 Finished features:
- - Fixing up the subsystem types to actually be logical (Well, I made it more clear how the key-value type works)
- - The GUI! It is quite simple, but it works in a satisfactory way, not taking up more space than it needs to.
- - A decent enough structure for JSON, still needs *some* more features as I have been writing the parser to cope with the example files which do not bring up every possible scenario, but the ground work is there.
- - Tons of configurability for launching. Really needs a manual on how it works, but until then I (the developer) would say it works decently for a wide enough amount of features, and it is pretty fast even though there are some bad programming choices inside it. (Hash tables. Too many of them.)
- - Some ground-work for desktop actions, which already are parsed fully and launchable, but it needs a function that prints a .desktop file containing it all.
- -  Making a manual on how it all works. (Currently, one has to read the code in order to comprehend how it works.) (Kind of done? The MANUAL.md file is really ugly, though.)
- -  A window for showing error messages if there are any
- -  Desktop file generation
+ - It is really bloated, files take up a lot of space when complexity increases. (Please don't use this if you have ~1GB of RAM.)
+ - Launches your programs according to your JSON files. Read the MANUAL.md on how to write them.
+ - Supports hiding itself in the background when it is not needed
+ - Aims to be small, but consumes some amount of memory. (And I am too lazy to hunt those memory-hogging bugs)
+ - Is generally fast at launching
+ - Supports generating desktop files
+ - If you know what to do, it's just as good as cobbling together shellscripts, only this one works and is designed for sharing data between instances.
+ - You are free to introduce your own changes to the code and, if you want to, set up a pull request to contribute back.
