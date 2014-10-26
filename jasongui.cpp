@@ -8,7 +8,7 @@ JasonGui::JasonGui(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->closeButton->setEnabled(false);
-    setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowStaysOnBottomHint|Qt::WindowCloseButtonHint);
+    setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint);
 }
 
 JasonGui::~JasonGui()

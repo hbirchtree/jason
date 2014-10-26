@@ -73,8 +73,10 @@ void JasonParser::startParse(){
         toggleCloseButton(true);
         emit failedProcessing();
         return;
-    }else
+    }else{
+        updateProgressText(tr("All done!"));
         emit finishedProcessing();
+    }
     return;
 }
 
