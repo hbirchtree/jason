@@ -7,17 +7,27 @@
 #include <QList>
 #include <QVariant>
 
+namespace ExecuterNS {
+enum ExecutionValues {
+    Exec_Shell,
+    Exec_Arguments,
+    Exec_WorkDir,
+    Exec_LazyExitStatus
+};
+class Executer;
+}
+
 class Executer : public QThread
 {
     Q_OBJECT
 public:
     explicit Executer(QObject *parent = 0);
-    int initializeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnvImport, bool lazyExitStatus);
-    int exec();
+//    int initializeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnvImport, bool lazyExitStatus);
+    int exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus);
 
 private:
     QProcess *executer;
-    QProcessEnvironment procEnv;
+    QProcessEnvironment *procEnv;
     QList<QVariant> initValues;
 
 signals:

@@ -25,6 +25,7 @@ void JasonParser::startParse(){
 
     QHash<QString,QVariant> jsonFinalData;
     //Populated with QHash "systems", QHash "activeopts", QList "subsystems", QHash "variables", QHash "procenv"
+    exitResult=0;
 
     jsonparser parser;
 
@@ -111,14 +112,12 @@ int JasonParser::executeProcess(QString shell, QStringList arguments, QString wo
     Executer partyTime;
     QEventLoop waitLoop;
 
-    partyTime.initializeProcess(shell,arguments,workDir,procEnv,lazyExitStatus);
-
     connect(&partyTime,SIGNAL(emitOutput(QString,QString)),SLOT(receiveLogOutput(QString,QString)));
     if(!detached){
         connect(&partyTime,SIGNAL(finished()),&waitLoop,SLOT(quit()));
     } else
         connect(this,SIGNAL(detachedRunEnd()),&waitLoop,SLOT(quit()));
-    int returnValue = partyTime.exec();
+    int returnValue = partyTime.exec(&shell,&arguments,&workDir,&procEnv,&lazyExitStatus);
     if(detached){
         emit displayDetachedMessage(title);
         waitLoop.exec();
@@ -163,7 +162,7 @@ int JasonParser::executeInstance(QHash<QString,QVariant> const &shellData,QHash<
 
 int JasonParser::executeQueue(QHash<QString,QVariant> const &runtimeValues,QString actionId){
     updateProgressText(tr("Executing queue"));
-    bool hideUi;
+    bool hideUi = false;
     if(runtimeValues.value("jason-opts").toHash().value("jason.hide-ui-on-run").isValid())
         hideUi = runtimeValues.value("jason-opts").toHash().value("jason.hide-ui-on-run").toBool();
     if(runtimeValues.value("main").toHash().value("desktop.title").isValid())

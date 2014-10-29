@@ -14,7 +14,7 @@ QJsonDocument jsonparser::jsonOpenFile(QString filename){
     }else
         jDocFile.setFileName(startDir+"/"+cw.fileName());
     if (!jDocFile.exists()) {
-        sendProgressTextUpdate(tr("Failed due to the file not existing"));
+        sendProgressTextUpdate(tr("Failed due to the file %s not existing").arg(jDocFile.fileName()));
         return QJsonDocument();
     }
     if (!jDocFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
@@ -24,7 +24,7 @@ QJsonDocument jsonparser::jsonOpenFile(QString filename){
     QJsonParseError initError;
     QJsonDocument jDoc = QJsonDocument::fromJson(jDocFile.readAll(),&initError);
     if (initError.error != 0){
-        reportError(2,"ERROR: jDoc: "+initError.errorString()+"\n");
+        reportError(2,tr("ERROR: jDoc: %s\n").arg(initError.errorString()));
         sendProgressTextUpdate(tr("An error occured. Please take a look at the error message to see what went wrong."));
         return QJsonDocument();
     }
@@ -167,7 +167,7 @@ int jsonparser::jsonParse(QJsonDocument jDoc, QHash<QString, QVariant> *targetHa
 
     QJsonObject mainTree = jDoc.object();
     if((mainTree.isEmpty())||(jDoc.isEmpty())){
-        sendProgressTextUpdate(tr("No objects found. Will not proceed."));
+//        sendProgressTextUpdate(tr("No objects found. Will not proceed."));
         return 1;
     }
 
@@ -747,7 +747,7 @@ int jsonparser::addExecution(QHash<QString,QVariant> const &sourceElement,QHash<
         if(key=="detachable-process")
             targetElement->insert("detach",sourceElement.value(key).toBool());
         if(key=="private.process-environment")
-            targetElement->insert("procenv",sourceElement.value(key).toHash());
+            targetElement->insert("procenv",sourceElement.value(key).toHash()); //Yeah, we're just throwing this in and hoping it works. I have yet to test this. The pipeline may just as well issue some malicious command instead of doing what it's supposed to do with it.
         if(key=="desktop.title")
             targetElement->insert(key,sourceElement.value(key).toString());
         if(key=="desktop.icon")

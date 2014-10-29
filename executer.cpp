@@ -5,31 +5,31 @@ Executer::Executer(QObject *parent) :
 {
 }
 
-int Executer::initializeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnvImport, bool lazyExitStatus){
-    initValues.append(QVariant(shell));
-    initValues.append(QVariant(arguments));
-    initValues.append(QVariant(workDir));
-    initValues.append(QVariant(lazyExitStatus));
-    procEnv=procEnvImport;
-}
+//int Executer::initializeProcess(){
+//    initValues.insert(shell);
+//    initValues.append(arguments);
+//    initValues.append(workDir);
+//    initValues.append(lazyExitStatus);
+//    procEnvImport = &procEnvImport;
+//}
 
-int Executer::exec(){
-    QString shell,workDir;
-    QStringList arguments;
-    bool lazyExitStatus;
+int Executer::exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus){
+//    QString shell,workDir;
+//    QStringList arguments;
+//    bool lazyExitStatus;
 
-    shell=initValues.at(0).toString();
-    arguments=initValues.at(1).toStringList();
-    workDir=initValues.at(2).toString();
-    lazyExitStatus=initValues.at(3).toBool();
+//    shell=initValues.at(0).toString();
+//    arguments=initValues.at(1).toStringList();
+//    workDir=initValues.at(2).toString();
+//    lazyExitStatus=initValues.at(3).toBool();
 
     QProcess *executer = new QProcess(this);
-    executer->setProcessEnvironment(procEnv);
+    executer->setProcessEnvironment(*procEnv);
     executer->setProcessChannelMode(QProcess::SeparateChannels);
-    if(!workDir.isEmpty())
-        executer->setWorkingDirectory(workDir);
-    executer->setProgram(shell);
-    executer->setArguments(arguments);
+    if(!workDir->isEmpty())
+        executer->setWorkingDirectory(*workDir);
+    executer->setProgram(*shell);
+    executer->setArguments(*arguments);
 
     connect(executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
     connect(executer,SIGNAL(started()),SLOT(processStarted()));
