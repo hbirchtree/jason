@@ -1,5 +1,7 @@
 #include "jsonparser.h"
 
+#include <QDebug>
+
 jsonparser::jsonparser(QObject *parent) :
     QObject(parent)
 {
@@ -450,6 +452,7 @@ int jsonparser::jasonActivateSystems(const QHash<QString, QVariant> &jsonData, Q
         postrunQueue.append(currentRun);
     }
     addExecution(activeOptions,&mainExec); //We'll grab all options from activeOptions, this should be standard.
+
     if(activeOptions.value("desktop.file").isValid())
         if(activeOptions.value("desktop.file").toHash().value("desktop.displayname").isValid())
             mainExec.insert("desktop.title",activeOptions.value("desktop.file").toHash().value("desktop.displayname").toString());
@@ -457,6 +460,9 @@ int jsonparser::jasonActivateSystems(const QHash<QString, QVariant> &jsonData, Q
         if(activeOptions.value("desktop.file").toHash().value("desktop.icon").isValid())
             mainExec.insert("desktop.icon",activeOptions.value("desktop.file").toHash().value("desktop.icon").toString());
     processExecutionElement(&mainExec,variables,prefixTable);
+
+    //Adding the run prefix and suffix is a great idea. (Fixed 14-11-10)
+    mainExec.insert("exec",prepRunValues.value("run-prefix").toString()+" "+mainExec.value("exec").toString()+" "+prepRunValues.value("run-suffix").toString());
 
     foreach(QString desktopkey,activeOptions.value("desktop.file").toHash().keys())
         if(desktopkey.startsWith("desktop.action.")){

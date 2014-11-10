@@ -46,6 +46,7 @@ void JasonGui::startParse(QString startDocument, QString actionId, QString deskt
 
     QEventLoop waitingLoop;
     connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
+    connect(this,SIGNAL(destroyed()),&waitingLoop,SLOT(quit()));
     connect(ui->closeButton,SIGNAL(clicked()),&waitingLoop,SLOT(quit()));
 //    connect(&jParse,SIGNAL(failedProcessing()),&waitingLoop,SLOT(quit()));
     workerThread->start();
