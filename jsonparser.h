@@ -41,10 +41,10 @@ private:
     int systemHandle(QHash<QString, QVariant> *systemElement);
 
     //Variables
-    void resolveVariables(QHash<QString,QVariant> *substitutes);
-    QString resolveVariable(const QHash<QString, QVariant> &substitutes, QString variable);
+    void resolveVariables(QHash<QString,QVariant> *variables);
+    QString resolveVariable(const QHash<QString, QVariant> &variables, QString variable);
     void variableHandle(QHash<QString,QVariant> *variables, QString key, QString value);
-    void variablesImport(QList<QVariant> inputVariables, QHash<QString,QVariant> *substitutes, QHash<QString,QVariant> const &activeOptions);
+    void variablesImport(QList<QVariant> inputVariables, QHash<QString,QVariant> *variables, QHash<QString,QVariant> const &activeOptions);
 
     //Environment variables
     void setEnvVar(QHash<QString,QVariant> *procEnv, QString key, QString value);

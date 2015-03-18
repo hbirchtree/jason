@@ -22,13 +22,11 @@ class Executer : public QThread
     Q_OBJECT
 public:
     explicit Executer(QObject *parent = 0);
-//    int initializeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnvImport, bool lazyExitStatus);
-    int exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus);
+    ~Executer();
+    int exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus, bool startDetached);
 
 private:
     QProcess *executer;
-    QProcessEnvironment *procEnv;
-    QList<QVariant> initValues;
 
 signals:
     void processFailed(QProcess::ProcessError);

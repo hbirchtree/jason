@@ -61,7 +61,7 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + environment: typical environment, enabled when the subsystem is enabled.
      + variables: typical, enabled when the subsystem is enabled.
      + Different types: (specified in the "type" key)
-       - bool: toggled by a boolean value. is not processed if the boolean value is false.
+       - bool: toggled by a boolean value. is not processed if the boolean value is false. may contain variables, environments and executing with syntax similar to substitution subsystems.
        - substitution:
          * trigger: when to run, sys-prerun or sys-postrun
          * variable: the variable that the input value is assigned to, is local if there is a .exec value, global if there's an environment.
@@ -115,6 +115,7 @@ It is designed to be flexible and handy to manage a large amount of programs you
      + Jason has a spec for every execution being performed, except for the "select" subsystem, it is as so:
         - bool lazy-exit-status : ignore exit status of program
         - bool detachable-process : wait for user to declare the program closed
+        - bool start-detached : spawn the process and detach as soon as it is started.
         - private.process-environment : object with keys and values presenting a QProcessEnvironment
         - desktop.icon : the icon displayed when the program runs, currently not implemented
         - desktop.title : the title displayed when the item is activated or executed

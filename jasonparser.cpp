@@ -1,14 +1,13 @@
 #include "jasonparser.h"
-#include "executer.h"
-#include "jsonparser.h"
-#include "desktoptools.h"
+
+#include <QDebug>
 
 JasonParser::JasonParser(){
 
 }
 
 JasonParser::~JasonParser(){
-
+    delete parser;
 }
 
 void JasonParser::testEnvironment(){
@@ -23,54 +22,55 @@ void JasonParser::startParse(){
     desktopFile=startOpts.value("desktop-file");
     jasonPath=startOpts.value("jason-path");
 
-    QHash<QString,QVariant> jsonFinalData;
+    jsonFinalData = new QHash<QString,QVariant>;
     //Populated with QHash "systems", QHash "activeopts", QList "subsystems", QHash "variables", QHash "procenv"
     exitResult=0;
 
-    jsonparser parser;
+    parser = new jsonparser();
 
-    connect(&parser,SIGNAL(sendProgressTextUpdate(QString)),this,SLOT(forwardProgressTextUpdate(QString)));
-    connect(&parser,SIGNAL(reportError(int,QString)),this,SLOT(forwardErrorMessage(int,QString)));
-    connect(&parser,SIGNAL(sendProgressBarUpdate(int)),this,SLOT(forwardProgressValueUpdate(int)));
+    connect(parser,SIGNAL(sendProgressTextUpdate(QString)),this,SLOT(forwardProgressTextUpdate(QString)));
+    connect(parser,SIGNAL(reportError(int,QString)),this,SLOT(forwardErrorMessage(int,QString)));
+    connect(parser,SIGNAL(sendProgressBarUpdate(int)),this,SLOT(forwardProgressValueUpdate(int)));
 
-    if(parser.jsonParse(parser.jsonOpenFile(startDocument),&jsonFinalData)!=0){
+    if(parser->jsonParse(parser->jsonOpenFile(startDocument),jsonFinalData)!=0){
         emit toggleCloseButton(true);
         emit failedProcessing();
-        jsonFinalData.clear();
+        jsonFinalData->clear();
         return;
     }
-
-//    qDebug() << jsonFinalData.value("systems").toHash() << "\n\n" << jsonFinalData.value("subsystems").toList() << "\n\n" << jsonFinalData.value("activeopts").toHash();
 
     if(!desktopFile.isEmpty()){
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         desktoptools desktopfilegenerator;
         connect(&desktopfilegenerator,SIGNAL(sendProgressTextUpdate(QString)),this,SLOT(forwardProgressTextUpdate(QString)));
         connect(&desktopfilegenerator,SIGNAL(reportError(int,QString)),this,SLOT(forwardErrorMessage(int,QString)));
-        QVariant object = jsonFinalData.value("activeopts").toHash().value("desktop.file");
+        QVariant object = jsonFinalData->value("activeopts").toHash().value("desktop.file");
         if(object.isValid()&&object.type()==QVariant::Hash){
             desktopfilegenerator.generateDesktopFile(desktopfilegenerator.desktopFileBuild(object.toHash()),desktopFile,jasonPath,startDocument);
         }
     } else {
-        QHash<QString,QVariant> runtimeValues;
-        if(parser.jasonActivateSystems(jsonFinalData,&runtimeValues)!=0){
+        runtimeValues = new QHash<QString,QVariant>();
+        if(parser->jasonActivateSystems(*jsonFinalData,runtimeValues)!=0){
             emit toggleCloseButton(true);
             emit failedProcessing();
             return;
         }
-        if(runtimeValues.value("jason-opts").toHash().value("jason.window-dimensions").isValid()){
-            QString source = runtimeValues.value("jason-opts").toHash().value("jason.window-dimensions").toString();
+        delete jsonFinalData;
+        delete parser;
+        if(runtimeValues->value("jason-opts").toHash().value("jason.window-dimensions").isValid()){
+            QString source = runtimeValues->value("jason-opts").toHash().value("jason.window-dimensions").toString();
             if(source.split("x").size()==2)
                 changeWindowDimensions(source.split("x")[0].toInt(),source.split("x")[1].toInt());
         }
-        if(executeQueue(runtimeValues,actionId)!=0){
+        if(executeQueue(*runtimeValues,actionId)!=0){
             emit toggleCloseButton(true);
             emit failedProcessing();
             return;
         }
+        delete runtimeValues;
     }
 
-    if(exitResult>0){
+    if(exitResult!=0){
         toggleCloseButton(true);
         emit failedProcessing();
         return;
@@ -108,21 +108,24 @@ void JasonParser::setStartOpts(QString startDocument, QString actionId, QString 
     return;
 }
 
-int JasonParser::executeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached,QString title){
-    Executer partyTime;
-    QEventLoop waitLoop;
+int JasonParser::executeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached,QString title,bool runDetached){
+    partyTime = new Executer();
+    waitLoop = new QEventLoop();
 
-    connect(&partyTime,SIGNAL(emitOutput(QString,QString)),SLOT(receiveLogOutput(QString,QString)));
+    connect(partyTime,SIGNAL(emitOutput(QString,QString)),SLOT(receiveLogOutput(QString,QString)));
     if(!detached){
-        connect(&partyTime,SIGNAL(finished()),&waitLoop,SLOT(quit()));
+        connect(partyTime,SIGNAL(finished()),waitLoop,SLOT(quit()));
     } else
-        connect(this,SIGNAL(detachedRunEnd()),&waitLoop,SLOT(quit()));
-    int returnValue = partyTime.exec(&shell,&arguments,&workDir,&procEnv,&lazyExitStatus);
+        connect(this,SIGNAL(detachedRunEnd()),waitLoop,SLOT(quit()));
+    int returnValue = partyTime->exec(&shell,&arguments,&workDir,&procEnv,&lazyExitStatus,runDetached);
     if(detached){
         emit displayDetachedMessage(title);
-        waitLoop.exec();
+        waitLoop->exec();
     }
     exitResult+=returnValue;
+
+    delete partyTime;
+    delete waitLoop;
     return returnValue;
 }
 
@@ -157,7 +160,8 @@ int JasonParser::executeInstance(QHash<QString,QVariant> const &shellData,QHash<
     QString workDir = execInstance.value("workdir").toString();
     bool lazyExit = execInstance.value("lazyexit").toBool();
     bool detached = execInstance.value("detach").toBool();
-    return executeProcess(shell,arguments,workDir,localProcEnv,lazyExit,detached,execInstance.value("desktop.title").toString());
+    bool rundetached = execInstance.value("start-detach").toBool();
+    return executeProcess(shell,arguments,workDir,localProcEnv,lazyExit,detached,execInstance.value("desktop.title").toString(),rundetached);
 }
 
 int JasonParser::executeQueue(QHash<QString,QVariant> const &runtimeValues,QString actionId){

@@ -1,6 +1,5 @@
 #include "jasongui.h"
 #include "ui_jasongui.h"
-#include "jasonparser.h"
 
 JasonGui::JasonGui(QWidget *parent) :
     QDialog(parent),
@@ -20,39 +19,38 @@ void JasonGui::startParse(QString startDocument, QString actionId, QString deskt
     show();
 
     //Open document
-    JasonParser jParse;
-    QThread *workerThread = new QThread;
-    jParse.moveToThread(workerThread);
-    jParse.setStartOpts(startDocument,actionId,desktopFile,jasonPath);
-    connect(workerThread,SIGNAL(started()),&jParse,SLOT(startParse()),Qt::QueuedConnection);
-    connect(&jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
-    connect(&jParse,SIGNAL(failedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
+    jParse = new JasonParser();
+    workerThread = new QThread();
+    jParse->moveToThread(workerThread);
+    jParse->setStartOpts(startDocument,actionId,desktopFile,jasonPath);
+    connect(workerThread,SIGNAL(started()),jParse,SLOT(startParse()),Qt::QueuedConnection);
+    connect(jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
+    connect(jParse,SIGNAL(failedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
 
     //Progress window
-    connect(&jParse,SIGNAL(updateProgressText(QString)),ui->statusLabel,SLOT(setText(QString)));
-    connect(&jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString))); //Print messages directed for the GUI to stdout, so that we may read them even if the GUI swishes by.
-    connect(&jParse,SIGNAL(updateProgressTitle(QString)),this,SLOT(setWindowTitle(QString)));
-    connect(&jParse,SIGNAL(finishedProcessing()),this,SLOT(close()));
-    connect(&jParse,SIGNAL(toggleCloseButton(bool)),ui->closeButton,SLOT(setEnabled(bool)));
-    connect(&jParse,SIGNAL(toggleProgressVisible(bool)),this,SLOT(hideJasonGui(bool)));
-    connect(&jParse,SIGNAL(changeProgressBarRange(int,int)),ui->progressBar,SLOT(setRange(int,int)));
-    connect(&jParse,SIGNAL(changeProgressBarValue(int)),ui->progressBar,SLOT(setValue(int)));
+    connect(jParse,SIGNAL(updateProgressText(QString)),ui->statusLabel,SLOT(setText(QString)));
+    connect(jParse,SIGNAL(updateProgressText(QString)),this,SLOT(printMessage(QString))); //Print messages directed for the GUI to stdout, so that we may read them even if the GUI swishes by.
+    connect(jParse,SIGNAL(updateProgressTitle(QString)),this,SLOT(setWindowTitle(QString)));
+    connect(jParse,SIGNAL(finishedProcessing()),this,SLOT(close()));
+    connect(jParse,SIGNAL(toggleCloseButton(bool)),ui->closeButton,SLOT(setEnabled(bool)));
+    connect(jParse,SIGNAL(toggleProgressVisible(bool)),this,SLOT(hideJasonGui(bool)));
+    connect(jParse,SIGNAL(changeProgressBarRange(int,int)),ui->progressBar,SLOT(setRange(int,int)));
+    connect(jParse,SIGNAL(changeProgressBarValue(int)),ui->progressBar,SLOT(setValue(int)));
 
     //Displaying messages and etc
-    connect(&jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
-    connect(&jParse,SIGNAL(displayDetachedMessage(QString)),SLOT(detachedMessage(QString)));
-    connect(this,SIGNAL(detachedHasClosed()),&jParse,SLOT(detachedMainProcessClosed()));
-    connect(&jParse,SIGNAL(emitOutput(QString,QString)),this,SLOT(showOutput(QString,QString)));
+    connect(jParse,SIGNAL(broadcastMessage(int,QString)),SLOT(showMessage(int,QString)));
+    connect(jParse,SIGNAL(displayDetachedMessage(QString)),SLOT(detachedMessage(QString)));
+    connect(this,SIGNAL(detachedHasClosed()),jParse,SLOT(detachedMainProcessClosed()));
+    connect(jParse,SIGNAL(emitOutput(QString,QString)),this,SLOT(showOutput(QString,QString)));
+
+    connect(ui->closeButton,SIGNAL(clicked()),this,SLOT(close()));
 
     QEventLoop waitingLoop;
-    connect(&jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
+    connect(jParse,SIGNAL(finishedProcessing()),&waitingLoop,SLOT(quit()));
     connect(this,SIGNAL(destroyed()),&waitingLoop,SLOT(quit()));
     connect(ui->closeButton,SIGNAL(clicked()),&waitingLoop,SLOT(quit()));
-//    connect(&jParse,SIGNAL(failedProcessing()),&waitingLoop,SLOT(quit()));
+    connect(jParse,SIGNAL(failedProcessing()),&waitingLoop,SLOT(quit()));
     workerThread->start();
-    /* If we don't run an eventloop here, it will close before postrun because there are no more events to process and nothing blocking the thread.
-     * This is likely the fix to that problem.
-    */
     waitingLoop.exec();
 }
 
@@ -79,17 +77,15 @@ void JasonGui::resizeWindow(int width, int height){
 
 void JasonGui::hideJasonGui(bool doShow){
     if(!doShow)
-        showMinimized();
+        setWindowState(Qt::WindowMinimized);
     if(doShow)
-        show();
+        setWindowState(Qt::WindowActive);
 }
 
 void JasonGui::detachedMessage(QString title){
     QMessageBox *detachedProgramNotify = new QMessageBox(this);
-    QString windowTitle = tr("Jason - Detached process");
-    QString text = tr("%1 is currently running in a detached state. Close this window to notify Jason when it has been closed properly.").arg(title);
-    detachedProgramNotify->setText(text);
-    detachedProgramNotify->setWindowTitle(windowTitle);
+    detachedProgramNotify->setText(tr("%1 is currently running in a detached state. Close this window to notify Jason when it has been closed properly.").arg(title));
+    detachedProgramNotify->setWindowTitle(tr("Jason - Detached process"));
     detachedProgramNotify->setButtonText(0,tr("It is closed"));
     connect(detachedProgramNotify,SIGNAL(finished(int)),this,SLOT(detachedProgramNotifyEmit(int)));
     detachedProgramNotify->show();
@@ -101,9 +97,9 @@ void JasonGui::detachedProgramNotifyEmit(int retInt){
 
 void JasonGui::showOutput(QString stdOut, QString stdErr){
     QDialog *outputWindow = new QDialog(this);
-    QGridLayout *outputLayout = new QGridLayout(this);
-    QTextEdit *errEdit = new QTextEdit(this);
-    QTextEdit *outEdit = new QTextEdit(this);
+    QGridLayout *outputLayout = new QGridLayout(outputWindow);
+    QTextEdit *errEdit = new QTextEdit(outputWindow);
+    QTextEdit *outEdit = new QTextEdit(outputWindow);
     errEdit->setReadOnly(true);
     outEdit->setReadOnly(true);
     errEdit->setText(stdErr);

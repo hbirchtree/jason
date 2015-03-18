@@ -1,6 +1,10 @@
 #ifndef JASONPARSER_H
 #define JASONPARSER_H
 
+#include "executer.h"
+#include "jsonparser.h"
+#include "desktoptools.h"
+
 #include <QFileInfo>
 #include <stdio.h>
 #include <QString>
@@ -60,8 +64,14 @@ private:
     //General
     QHash<QString, QString> startOpts;
 
+    jsonparser *parser;
+    Executer *partyTime;
+    QHash<QString,QVariant> *jsonFinalData;
+    QHash<QString,QVariant> *runtimeValues;
+    QEventLoop *waitLoop;
+
     //Fucking finally
-    int executeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached, QString title);
+    int executeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached, QString title, bool runDetached);
     int executeInstance(const QHash<QString, QVariant> &shellData, QHash<QString,QVariant> const &execInstance, const QProcessEnvironment &procEnv);
     int executeQueue(QHash<QString,QVariant> const &runtimeValues, QString actionId);
 

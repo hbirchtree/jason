@@ -1,6 +1,8 @@
 #ifndef JASONGUI_H
 #define JASONGUI_H
 
+#include "jasonparser.h"
+
 #include <QDialog>
 #include <QMessageBox>
 #include <QGridLayout>
@@ -28,6 +30,8 @@ private:
     QDialog *outputWindow;
     QGridLayout *outputLayout;
     QTextEdit *errEdit, *outEdit;
+
+    JasonParser *jParse;
 
 signals:
     void updateLaunchProgress(QString);
