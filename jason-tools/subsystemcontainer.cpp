@@ -35,6 +35,8 @@ void SubsystemContainer::applyLocalConfiguration(QHash<QString,QVariant> *subsys
     if(subsystemElement->contains("appearance")){
         d_title = subsystemElement->value("appearance").toMap().value("desktop.title").toString();
         d_icon = subsystemElement->value("appearance").toMap().value("desktop.icon").toString();
+        subsystemElement->insert("desktop.title",d_title);
+        subsystemElement->insert("desktop.icon",d_icon);
     }
     switch(type){
     case ST_BOOL:

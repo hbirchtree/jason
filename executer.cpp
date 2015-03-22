@@ -16,9 +16,6 @@ int Executer::exec(ExecutionUnit* unit){
 
     executer = new QProcess(this);
     executer->setProcessEnvironment(unit->getEnvironment()->getProcEnv());
-    qDebug() << "\n\n\n\n\n\n";
-    for(QString key : unit->getEnvironment()->getProcEnv().keys())
-        qDebug() << key << unit->getEnvironment()->getProcEnv().value(key);
     executer->setProcessChannelMode(QProcess::SeparateChannels);
     if(!unit->getWorkDir().isEmpty())
         executer->setWorkingDirectory(unit->getWorkDir());

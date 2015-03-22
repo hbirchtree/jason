@@ -22,9 +22,9 @@ RuntimeQueue* JasonCore::resolveDependencies(QVariantMap *totalMap,ActiveOptions
     getExecSystem(totalMap);
     getSubsystems(totalMap);
 
-    for(SubsystemContainer* subsys : m_subsystems)
-        subsys->interpretOption(activeOptions->getOption("subsystem."+subsys->getActivator()).first(),runQueue,envContainer,varHandler,m_systems.first()->getInherited() << m_systems.first(),activeOptions);
     m_systems.first()->systemActivate(activeOptions,&this->activeSystems,varHandler,envContainer);
+    for(SubsystemContainer* subsys : m_subsystems)
+        subsys->interpretOption(activeOptions->getOption("subsystem."+subsys->getActivator()).first(),runQueue,envContainer,varHandler,getSystems(),activeOptions);
     varHandler->resolveVariables();
 
     QStringList activePrefixes = m_systems.first()->getConfigPrefix();
@@ -108,7 +108,7 @@ int JasonCore::getSubsystems(QVariantMap *totalMap){
             subsystems.append(it.value().toList());
     }
     for(QVariant subsys : subsystems){
-        SubsystemContainer* s = new SubsystemContainer(this,new auto(StatFuncs::mapToHash(subsys.toMap())),varHandler,envContainer);
+        SubsystemContainer* s = new SubsystemContainer(this,new auto(StatFuncs::mapToHash(subsys.toMap())),varHandler,envContainer,activeOptions,getSystems());
         for(QString key : requestedSubsystems.keys())
             if(key.endsWith(s->getActivator())){
                 m_subsystems.append(s);
