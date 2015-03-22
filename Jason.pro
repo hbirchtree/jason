@@ -18,13 +18,31 @@ SOURCES += main.cpp \
     jasongui.cpp \
     executer.cpp \
     jsonparser.cpp \
-    desktoptools.cpp
+    desktoptools.cpp \
+    modules/variablehandler.cpp \
+    jason-tools/jasoncore.cpp \
+    jsonstaticfuncs.cpp \
+    jason-tools/systemcontainer.cpp \
+    jason-tools/environmentcontainer.cpp \
+    jason-tools/subsystemcontainer.cpp \
+    jason-tools/runtimequeue.cpp \
+    jason-tools/activeoptionscontainer.cpp \
+    modules/executionunit.cpp
 
 HEADERS  += jasonparser.h \
     jasongui.h \
     executer.h \
     jsonparser.h \
-    desktoptools.h
+    desktoptools.h \
+    modules/variablehandler.h \
+    jason-tools/jasoncore.h \
+    jsonstaticfuncs.h \
+    jason-tools/systemcontainer.h \
+    jason-tools/environmentcontainer.h \
+    jason-tools/subsystemcontainer.h \
+    jason-tools/runtimequeue.h \
+    jason-tools/activeoptionscontainer.h \
+    modules/executionunit.h
 
 TRANSLATIONS += \
     jason-en.ts

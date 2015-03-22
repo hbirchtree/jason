@@ -5,6 +5,7 @@
 #include "jsonparser.h"
 #include "desktoptools.h"
 
+#include <QMetaObject>
 #include <QFileInfo>
 #include <stdio.h>
 #include <QString>
@@ -31,14 +32,6 @@ public slots:
     void startParse();
     void detachedMainProcessClosed();
 
-private slots:
-//    void doPrerun();
-//    void doPostrun();
-    void receiveLogOutput(QString stdOut,QString stdErr);
-    void forwardProgressTextUpdate(QString message);
-    void forwardProgressValueUpdate(int value);
-    void forwardErrorMessage(int status,QString message);
-
 signals:
     //Related to the general look and workings
     void finishedProcessing();
@@ -47,7 +40,6 @@ signals:
     void toggleCloseButton(bool);
     void updateProgressText(QString);
     void updateProgressTitle(QString);
-    void updateProgressIcon(QString);
     void broadcastMessage(int,QString);
     void toggleProgressVisible(bool);
     void displayDetachedMessage(QString);
@@ -61,20 +53,16 @@ signals:
     void emitOutput(QString,QString);
 
 private:
+    QList<QMetaObject::Connection> connectedSlots;
     //General
     QHash<QString, QString> startOpts;
 
     jsonparser *parser;
-    Executer *partyTime;
     QHash<QString,QVariant> *jsonFinalData;
     QHash<QString,QVariant> *runtimeValues;
     QEventLoop *waitLoop;
 
-    //Fucking finally
-    int executeProcess(QString shell, QStringList arguments, QString workDir, QProcessEnvironment procEnv, bool lazyExitStatus, bool detached, QString title, bool runDetached);
-    int executeInstance(const QHash<QString, QVariant> &shellData, QHash<QString,QVariant> const &execInstance, const QProcessEnvironment &procEnv);
-    int executeQueue(QHash<QString,QVariant> const &runtimeValues, QString actionId);
-
+    void quitProcess();
 };
 
 #endif // JASONPARSER_H

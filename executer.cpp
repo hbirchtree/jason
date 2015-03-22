@@ -1,34 +1,40 @@
 #include "executer.h"
 
-Executer::Executer(QObject *parent) :
+Executer::Executer(QObject *parent, QString shell, QString shellArg) :
     QThread(parent)
 {
+    this->shell = shell;
+    this->shellArg = shellArg;
 }
 
 Executer::~Executer(){
     delete executer;
 }
 
-int Executer::exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus,bool startDetached){
+int Executer::exec(ExecutionUnit* unit){
+    QStringList arguments = QStringList() << shellArg << unit->getExecString();
 
     executer = new QProcess(this);
-    executer->setProcessEnvironment(*procEnv);
+    executer->setProcessEnvironment(unit->getEnvironment()->getProcEnv());
+    qDebug() << "\n\n\n\n\n\n";
+    for(QString key : unit->getEnvironment()->getProcEnv().keys())
+        qDebug() << key << unit->getEnvironment()->getProcEnv().value(key);
     executer->setProcessChannelMode(QProcess::SeparateChannels);
-    if(!workDir->isEmpty())
-        executer->setWorkingDirectory(*workDir);
-    executer->setProgram(*shell);
-    executer->setArguments(*arguments);
+    if(!unit->getWorkDir().isEmpty())
+        executer->setWorkingDirectory(unit->getWorkDir());
+    executer->setProgram(shell);
+    executer->setArguments(arguments);
 
     connect(executer, SIGNAL(finished(int,QProcess::ExitStatus)),SLOT(processFinished(int,QProcess::ExitStatus)));
 
-    if(startDetached){
-        executer->startDetached(*shell,*arguments,*workDir);
+    if(unit->startsDetached()){
+        executer->startDetached(shell,arguments,unit->getWorkDir());
         executer->waitForStarted(-1);
         return 0;
     }else
         executer->start();
     executer->waitForFinished(-1);
-    if(!lazyExitStatus){
+    if(!unit->isLazyExit()){
         return 0;
     }
     return executer->exitCode();

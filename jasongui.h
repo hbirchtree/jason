@@ -23,6 +23,8 @@ public:
     void startParse(QString startDocument, QString actionId, QString desktopFile, QString jasonPath);
 
 private:
+    QEventLoop waitingLoop;
+
     Ui::JasonGui *ui;
     QMessageBox *messageBox;
     QMessageBox *detachedProgramNotify;

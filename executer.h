@@ -6,6 +6,7 @@
 #include <QProcessEnvironment>
 #include <QList>
 #include <QVariant>
+#include "modules/executionunit.h"
 
 namespace ExecuterNS {
 enum ExecutionValues {
@@ -21,12 +22,14 @@ class Executer : public QThread
 {
     Q_OBJECT
 public:
-    explicit Executer(QObject *parent = 0);
+    explicit Executer(QObject *parent = 0, QString shell = QString(), QString shellArg = QString());
     ~Executer();
-    int exec(QString *shell, QStringList *arguments, QString *workDir, QProcessEnvironment *procEnv, bool *lazyExitStatus, bool startDetached);
+    int exec(ExecutionUnit* unit);
 
 private:
     QProcess *executer;
+    QString shell;
+    QString shellArg;
 
 signals:
     void processFailed(QProcess::ProcessError);
