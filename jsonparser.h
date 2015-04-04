@@ -34,6 +34,10 @@ public:
     QHash<QString,QVariant> getDesktopFile(){
         return desktopFile;
     }
+    QHash<QString,ExecutionUnit*> actions;
+    QHash<QString,ExecutionUnit*> getActions(){
+        return actions;
+    }
 
     QHash<QString,QVariant> getWindowOpts(){
         return windowOpts;

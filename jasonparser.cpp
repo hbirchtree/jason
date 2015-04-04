@@ -34,6 +34,12 @@ void JasonParser::startParse(){
     }
     updateProgressTitle(parser->getRunQueue()->getMainrun()->getTitle());
 
+
+    if(!actionId.isEmpty())
+        for(QString key : parser->getActions().keys())
+            if(key==actionId)
+                parser->getRunQueue()->setMainrun(parser->getActions().value(key));
+
     if(!parser->hasCompleted()&&!desktopFile.isEmpty()){
         updateProgressText(tr("We are generating a .desktop file now. Please wait for possible on-screen prompts."));
         desktoptools desktopfilegenerator;
@@ -70,6 +76,11 @@ void JasonParser::startParse(){
             disconnect(logger);
         }
     } else
+        if(!actionId.isEmpty()){
+            for(QString key : parser->getActions().keys()){
+                qDebug() << "action:" << key << parser->getActions().value(key)->getExecString();
+            }
+        }
         for(ExecutionUnit* unit : parser->getRunQueue()->getQueue()){
             qDebug() << "Execution:";
             qDebug() << "command:" << unit->getExecString();

@@ -75,7 +75,7 @@ int jsonparser::jsonParse(QJsonDocument jDoc){
     getMap(mainMap,totalMap,activeOpts,jCore);
 
     QList<QVariant> shellOpts = activeOpts->getOption("shell.properties");
-    desktopFile = activeOpts->getOption("desktop.file").first().toHash();
+    desktopFile = StatFuncs::mapToHash(activeOpts->getOption("desktop.file").first().toMap());
     QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
     for(QVariant opt : shellOpts){
         QMap<QString,QVariant> optMap = opt.toMap();
@@ -97,6 +97,11 @@ int jsonparser::jsonParse(QJsonDocument jDoc){
     }
 
     runQueue = jCore->resolveDependencies(totalMap,activeOpts);
+
+    for(QString key : desktopFile.keys()) //Get actions
+        if(key.startsWith("desktop.action.")){
+            actions.insert(key.split(".").at(2),new ExecutionUnit(this,varHandler,activeOpts,StatFuncs::mapToHash(desktopFile.value(key).toMap()),jCore->getSystems()));
+        }
 
     if(runQueue->getQueue().size()>0)
         b_hasCompleted = true;

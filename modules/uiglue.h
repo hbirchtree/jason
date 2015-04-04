@@ -8,7 +8,7 @@ class UIGlue : public QObject
 {
     Q_OBJECT
 public:
-    virtual void setDryRun(bool dryrun);
+    virtual void setDryRun(bool dryrun) = 0;
     virtual void setStartDoc(QString startDocument) = 0;
     virtual void setActionId(QString actionId){}
     virtual void setDesktopFile(QString desktopFile){}
