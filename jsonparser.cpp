@@ -98,10 +98,16 @@ int jsonparser::jsonParse(QJsonDocument jDoc){
 
     runQueue = jCore->resolveDependencies(totalMap,activeOpts);
 
+    EnvironmentContainer systemEnv(this,varHandler);
+    QProcessEnvironment systemSrc = QProcessEnvironment::systemEnvironment();
+    for(QString key : systemSrc.keys())
+        systemEnv.setEnvVar(key,systemSrc.value(key));
     for(QString key : desktopFile.keys()) //Get actions
         if(key.startsWith("desktop.action.")){
             ExecutionUnit* action = new ExecutionUnit(this,varHandler,activeOpts,StatFuncs::mapToHash(desktopFile.value(key).toMap()),jCore->getSystems());
             action->resolveVariables(varHandler);
+            action->getEnvironment()->merge(&systemEnv);
+            action->getEnvironment()->merge(envContainer,true);
             actions.insert(key.split(".").at(2),action);
         }
 

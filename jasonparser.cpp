@@ -86,7 +86,7 @@ void JasonParser::startParse(){
             qDebug() << "command:" << unit->getExecString();
             qDebug() << "workdir:" << unit->getWorkDir();
             qDebug() << "title:" << unit->getTitle();
-            qDebug() << "env:" << unit->getEnvironment() << "\n";
+            qDebug() << "env:" << unit->getEnvironment()->getProcEnv().toStringList() << "\n";
         }
 
     if(exitResult!=0){
