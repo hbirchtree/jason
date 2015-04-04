@@ -100,7 +100,9 @@ int jsonparser::jsonParse(QJsonDocument jDoc){
 
     for(QString key : desktopFile.keys()) //Get actions
         if(key.startsWith("desktop.action.")){
-            actions.insert(key.split(".").at(2),new ExecutionUnit(this,varHandler,activeOpts,StatFuncs::mapToHash(desktopFile.value(key).toMap()),jCore->getSystems()));
+            ExecutionUnit* action = new ExecutionUnit(this,varHandler,activeOpts,StatFuncs::mapToHash(desktopFile.value(key).toMap()),jCore->getSystems());
+            action->resolveVariables(varHandler);
+            actions.insert(key.split(".").at(2),action);
         }
 
     if(runQueue->getQueue().size()>0)
