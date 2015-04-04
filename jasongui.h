@@ -33,7 +33,7 @@ private:
     QGridLayout *outputLayout;
     QTextEdit *errEdit, *outEdit;
 
-    JasonParser *jParse;
+    UIGlue *jParse;
 
 signals:
     void updateLaunchProgress(QString);

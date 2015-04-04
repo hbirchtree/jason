@@ -27,7 +27,8 @@ SOURCES += main.cpp \
     jason-tools/subsystemcontainer.cpp \
     jason-tools/runtimequeue.cpp \
     jason-tools/activeoptionscontainer.cpp \
-    modules/executionunit.cpp
+    modules/executionunit.cpp \
+    kaidan.cpp
 
 HEADERS  += jasonparser.h \
     jasongui.h \
@@ -42,7 +43,9 @@ HEADERS  += jasonparser.h \
     jason-tools/subsystemcontainer.h \
     jason-tools/runtimequeue.h \
     jason-tools/activeoptionscontainer.h \
-    modules/executionunit.h
+    modules/executionunit.h \
+    kaidan.h \
+    modules/uiglue.h
 
 TRANSLATIONS += \
     jason-en.ts
@@ -53,4 +56,5 @@ OTHER_FILES += \
     README.md
 
 FORMS += \
-    jasongui.ui
+    jasongui.ui \
+    kaidan.ui

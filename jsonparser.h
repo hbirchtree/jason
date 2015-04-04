@@ -31,6 +31,10 @@ public:
     RuntimeQueue* getRunQueue() const {
         return runQueue;
     }
+    QHash<QString,QVariant> getDesktopFile(){
+        return desktopFile;
+    }
+
     QHash<QString,QVariant> getWindowOpts(){
         return windowOpts;
     }
@@ -43,6 +47,7 @@ private:
     void getMap(QVariantMap *depmap, QVariantMap *totalMap, ActiveOptionsContainer *activeOpts, JasonCore *jCore);
 
     RuntimeQueue* runQueue;
+    QHash<QString,QVariant> desktopFile;
     QString shellString;
     QString shellArgString;
 

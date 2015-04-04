@@ -22,8 +22,13 @@ void JasonGui::startParse(QString startDocument, QString actionId, QString deskt
     //Open document
     jParse = new JasonParser();
     workerThread = new QThread();
+
     jParse->moveToThread(workerThread);
-    jParse->setStartOpts(startDocument,actionId,desktopFile,jasonPath);
+    jParse->setStartDoc(startDocument);
+    jParse->setActionId(actionId);
+    jParse->setDesktopFile(desktopFile);
+    jParse->setPath(jasonPath);
+
     connect(workerThread,SIGNAL(started()),jParse,SLOT(startParse()),Qt::QueuedConnection);
     connect(jParse,SIGNAL(finishedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);
     connect(jParse,SIGNAL(failedProcessing()),workerThread,SLOT(quit()),Qt::QueuedConnection);

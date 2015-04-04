@@ -15,47 +15,68 @@
 #include <QProcessEnvironment>
 #include <QEventLoop>
 
-class JasonParser : public QObject
+#include "modules/uiglue.h"
+
+class JasonParser : public UIGlue
 {
     Q_OBJECT
 public:
     JasonParser();
     ~JasonParser();
+    void setDryRun(bool dry){
+        this->b_dry = dry;
+    }
 
-    //General
-    void testEnvironment();
-    void setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath);
+    void setStartDoc(QString startDoc){
+        if(startDoc.isEmpty())
+           return;
+        this->startDoc = startDoc;
+        checkValidity();
+    }
+    void setActionId(QString aid){
+        if(aid.isEmpty())
+           return;
+        this->actionId = aid;
+        checkValidity();
+    }
+    void setDesktopFile(QString df){
+        if(df.isEmpty())
+           return;
+        this->desktopFile = df;
+        checkValidity();
+    }
+    void setPath(QString jp){
+        if(jp.isEmpty())
+           return;
+        this->jasonPath = jp;
+        checkValidity();
+    }
+    bool isReady(){
+        return b_validState;
+    }
 
-    int exitResult;
 
 public slots:
     void startParse();
-    void detachedMainProcessClosed();
-
-signals:
-    //Related to the general look and workings
-    void finishedProcessing();
-    void failedProcessing();
-    //Directly about the GUI
-    void toggleCloseButton(bool);
-    void updateProgressText(QString);
-    void updateProgressTitle(QString);
-    void broadcastMessage(int,QString);
-    void toggleProgressVisible(bool);
-    void displayDetachedMessage(QString);
-    void changeProgressWIcon(QString);
-    void changeProgressBarRange(int,int); //0,0 will make it indefinite, something else will make it normal.
-    void changeProgressBarValue(int);
-    void changeWindowDimensions(int,int);
-
-    //Related to processes
-    void detachedRunEnd();
-    void emitOutput(QString,QString);
+    void detachedProgramExit();
 
 private:
+    void checkValidity(){
+        if(startDoc.isEmpty()||(!desktopFile.isEmpty()&&jasonPath.isEmpty()))
+            return;
+        b_validState = true;
+    }
+
+    QString startDoc;
+    QString actionId;
+    QString desktopFile;
+    QString jasonPath;
+    bool b_validState = false;
+    bool b_dry = false;
+
+    int exitResult;
+
     QList<QMetaObject::Connection> connectedSlots;
-    //General
-    QHash<QString, QString> startOpts;
 
     jsonparser *parser;
     QHash<QString,QVariant> *jsonFinalData;

@@ -75,6 +75,7 @@ int jsonparser::jsonParse(QJsonDocument jDoc){
     getMap(mainMap,totalMap,activeOpts,jCore);
 
     QList<QVariant> shellOpts = activeOpts->getOption("shell.properties");
+    desktopFile = activeOpts->getOption("desktop.file").first().toHash();
     QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
     for(QVariant opt : shellOpts){
         QMap<QString,QVariant> optMap = opt.toMap();

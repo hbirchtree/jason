@@ -12,22 +12,13 @@ JasonParser::~JasonParser(){
     delete parser;
 }
 
-void JasonParser::testEnvironment(){
-
-}
-
 void JasonParser::quitProcess(){
-    emit toggleCloseButton(true);
+//    emit toggleCloseButton(true);
     emit failedProcessing();
 }
 
 void JasonParser::startParse(){
     updateProgressText(tr("Starting to parse JSON document"));
-    QString startDocument,actionId,desktopFile,jasonPath;
-    startDocument=startOpts.value("start-document");
-    actionId=startOpts.value("action-id");
-    desktopFile=startOpts.value("desktop-file");
-    jasonPath=startOpts.value("jason-path");
 
     exitResult=0;
 
@@ -37,7 +28,7 @@ void JasonParser::startParse(){
     connectedSlots.append(connect(parser,&jsonparser::reportError,[=](int severity,QString message){exitResult++;this->broadcastMessage(severity,message);}));
     connectedSlots.append(connect(parser,&jsonparser::sendProgressBarUpdate,[=](int value){this->changeProgressBarValue(value);}));
 
-    if(parser->jsonParse(parser->jsonOpenFile(startDocument))!=0){
+    if(parser->jsonParse(parser->jsonOpenFile(startDoc))!=0){
         quitProcess();
         return;
     }
@@ -48,20 +39,18 @@ void JasonParser::startParse(){
         desktoptools desktopfilegenerator;
         connectedSlots.append(connect(&desktopfilegenerator,&desktoptools::sendProgressTextUpdate,[=](QString message){this->updateProgressText(message);}));
         connectedSlots.append(connect(&desktopfilegenerator,&desktoptools::reportError,[=](int severity,QString message){exitResult++;this->broadcastMessage(severity,message);}));
-        QVariant object = jsonFinalData->value("activeopts").toHash().value("desktop.file");
-        if(object.isValid()&&object.type()==QVariant::Hash){
-            desktopfilegenerator.generateDesktopFile(desktopfilegenerator.desktopFileBuild(object.toHash()),desktopFile,jasonPath,startDocument);
-        }
+
+        desktopfilegenerator.generateDesktopFile(desktopfilegenerator.desktopFileBuild(parser->getDesktopFile()),desktopFile,jasonPath,startDoc);
         for(QMetaObject::Connection cnct : connectedSlots)
             disconnect(cnct);
-    } else {
+    } else if(!b_dry){
         bool hideUi = false;
         QHash<QString,QVariant> windowOpts = parser->getWindowOpts();
         for(QString opt : windowOpts.keys())
             if(opt=="jason.hide-ui-on-run")
                 hideUi = windowOpts.value(opt).toBool();
         updateProgressText(tr("Executing program queue"));
-        toggleProgressVisible(!hideUi);
+        hideMainWindow(hideUi);
         QEventLoop waiter;
         for(ExecutionUnit* unit : parser->getRunQueue()->getQueue()){
             Executer e(this,parser->getShell(),parser->getShellArg());
@@ -80,7 +69,14 @@ void JasonParser::startParse(){
             exitResult+=returnValue;
             disconnect(logger);
         }
-    }
+    } else
+        for(ExecutionUnit* unit : parser->getRunQueue()->getQueue()){
+            qDebug() << "Execution:";
+            qDebug() << "command:" << unit->getExecString();
+            qDebug() << "workdir:" << unit->getWorkDir();
+            qDebug() << "title:" << unit->getTitle();
+            qDebug() << "env:" << unit->getEnvironment() << "\n";
+        }
 
     if(exitResult!=0){
         quitProcess();
@@ -92,20 +88,6 @@ void JasonParser::startParse(){
     return;
 }
 
-void JasonParser::setStartOpts(QString startDocument, QString actionId, QString desktopFile, QString jasonPath){
-    if(!startDocument.isEmpty())
-        startOpts.insert("start-document",startDocument);
-    if(!actionId.isEmpty())
-        startOpts.insert("action-id",actionId);
-    if(!desktopFile.isEmpty())
-        startOpts.insert("desktop-file",desktopFile);
-    if(!jasonPath.isEmpty())
-        startOpts.insert("jason-path",jasonPath);
-    QFileInfo cw(startDocument);
-    startOpts.insert("working-directory",cw.absolutePath());
-    return;
-}
-
-void JasonParser::detachedMainProcessClosed(){
+void JasonParser::detachedProgramExit(){
     emit detachedRunEnd();
 }

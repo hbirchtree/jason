@@ -1,6 +1,6 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
-#include "jasongui.h"
+#include "kaidan.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
     desktopGen.setValueName(QApplication::translate("init","output %1 file").arg(".desktop"));
     cParse.addOption(desktopAction);
     cParse.addOption(desktopGen);
+    cParse.addOption(QCommandLineOption("dry",QApplication::translate("dry","Run without making changes"),"dry","0"));
     //Actual processing
     cParse.process(a);
 
@@ -35,15 +36,19 @@ int main(int argc, char *argv[])
     QStringList options = cParse.optionNames();
     QString actionToLaunch;
     QString desktopFile;
+    bool dryrun = false;
     foreach(QString option, options){
         if(option=="action")
             actionToLaunch = cParse.value(option);
         if(option=="desktop-file-generate")
             desktopFile = cParse.value(option);
+        if(option=="dry")
+            if(cParse.value(option)=="1")
+                dryrun=true;
     }
 
-    JasonGui jasongui;
-    jasongui.startParse(filename,actionToLaunch,desktopFile,a.arguments()[0]);
+    Kaidan jasongui;
+    jasongui.initializeParse(filename,actionToLaunch,desktopFile,a.arguments()[0],dryrun);
 
     return 0;
 }
